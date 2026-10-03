@@ -39,3 +39,9 @@ Docs: https://docs.expo.dev/eas/index.md
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+
+## Stitch 사용 규칙
+
+- Stitch와 Stitch MCP는 디자인을 조회하고 참고하는 용도로만 사용한다.
+- 이 프로젝트에서 Stitch 프로젝트, 화면, 디자인 시스템, 에셋을 절대 수정하지 않는다. 생성, 편집, 디자인 시스템 적용, 업로드, 삭제도 금지한다.
+- 디자인을 맞춰야 할 때는 Stitch를 읽기 전용으로 확인하고 이 저장소의 파일만 수정한다.
