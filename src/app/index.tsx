@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ExamCalendarModal } from '@/components/exam-calendar-modal';
+import { registrationStatus } from '@/constants/exam-schedule';
+
 const color = {
   background: '#FAF9F6', surface: '#FFFFFF', ink: '#252622', muted: '#666963',
   navy: '#F02D5C', navySoft: '#FFE7EC', line: '#E8E6E2',
@@ -97,7 +100,7 @@ function MobileExam({ days, onGuide, onCalendar }: { days: number; onGuide: () =
         <Icon name={icons.arrow} size={18} />
       </Pressable>
       <View style={styles.dateBox}>
-        <View style={styles.dateRow}><Text style={styles.dateText}>접수 마감: 9.18(금)  <Text style={styles.dateAccent}>(마감)</Text></Text><Text style={styles.dateText}>시험일: 12.6(일)</Text></View>
+        <View style={styles.dateRow}><Text style={styles.dateText}>접수: 9.1~9.20 / 9.28~10.4  <Text style={styles.dateAccent}>({registrationStatus()})</Text></Text><Text style={styles.dateText}>시험일: 12.6(일)</Text></View>
         <Pressable style={styles.calendarButton} onPress={onCalendar} accessibilityRole="button"><Icon name={icons.calendar} size={15} /><Text style={styles.calendarButtonText}>전체 시험 & 학습 달력 보기</Text><Icon name={icons.arrow} size={14} /></Pressable>
       </View>
       <View style={styles.recommendation}><Icon name={icons.checkCircle} tint="#50644B" size={16} /><Text style={styles.recommendationText}><Text style={styles.recommendationLead}>오늘의 권장 학습량:</Text> 2개 수업 + 복습 15문항을 완료하면 합격 안정권에 도달합니다.</Text></View>
@@ -117,7 +120,7 @@ function GuideCard() {
 }
 
 function CalendarCard({ days }: { days: number }) {
-  return <Card><SectionTitle title="2026 제2회 시험 일정" detail={`D-${days}`} /><View style={styles.calendarInfo}><View style={styles.between}><Text style={styles.mutedSmall}>원서 접수 기간</Text><Text style={styles.calendarValue}>9.1(화) ~ 9.18(금)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>제2회 본시험일</Text><Text style={styles.calendarValue}>12월 6일 (일)</Text></View></View><View style={styles.between}><Text style={styles.mutedSmall}>이번 주 연속 출석 스트릭</Text><Text style={styles.streakText}>7일 연속 완주</Text></View><View style={styles.weekRow}>{['월','화','수','목','금','토','일'].map((day, index) => <View key={day} style={[styles.weekDay, index === 5 && styles.weekDayToday]}><Text style={styles.weekLabel}>{day}</Text><Text style={[styles.weekMark, index === 5 && styles.weekMarkToday]}>{index < 5 ? '✓' : index === 5 ? '●' : '○'}</Text></View>)}</View></Card>;
+  return <Card><SectionTitle title="2026 제2회 시험 일정" detail={`D-${days}`} /><View style={styles.calendarInfo}><View style={styles.between}><Text style={styles.mutedSmall}>일반접수</Text><Text style={styles.calendarValue}>9.1(화) ~ 9.20(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>추가접수</Text><Text style={styles.calendarValue}>9.28(월) ~ 10.4(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>제2회 본시험일</Text><Text style={styles.calendarValue}>12월 6일 (일)</Text></View></View><Text style={styles.mutedSmall}>수험표 출력: 10.26(월)부터 · 서울 실시위원회 기준</Text></Card>;
 }
 
 function Progress({ percent, coral = false, neutral = false, mobile = false }: { percent: number; coral?: boolean; neutral?: boolean; mobile?: boolean }) {
@@ -232,17 +235,14 @@ function GuideModal({ visible, onClose }: { visible: boolean; onClose: () => voi
   </Modal>;
 }
 
-function CalendarModal({ visible, onClose, days }: { visible: boolean; onClose: () => void; days: number }) {
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><View style={styles.modalPanel}><View style={styles.between}><Text style={styles.modalTitle}>시험 일정 및 학습 달력</Text><Pressable onPress={onClose} accessibilityLabel="닫기"><Text style={styles.modalClose}>닫기</Text></Pressable></View><ScrollView style={styles.modalScroll}><CalendarCard days={days} /></ScrollView></View></View></Modal>;
-}
-
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const wide = width >= 700;
   const days = daysToExam();
   const [modal, setModal] = useState<'guide' | 'calendar' | null>(null);
+  const [calendarSession, setCalendarSession] = useState(0);
 
-  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => setModal('calendar')} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><GuideModal visible={modal === 'guide'} onClose={() => setModal(null)} /><CalendarModal visible={modal === 'calendar'} onClose={() => setModal(null)} days={days} /></SafeAreaView>;
+  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => { setCalendarSession(value => value + 1); setModal('calendar'); }} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><GuideModal visible={modal === 'guide'} onClose={() => setModal(null)} /><ExamCalendarModal key={calendarSession} visible={modal === 'calendar'} onClose={() => setModal(null)} days={days} /></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
@@ -316,13 +316,6 @@ const styles = StyleSheet.create({
   calendarInfo: { backgroundColor: '#F6F4F2', borderRadius: 11, padding: 12, gap: 9, marginBottom: 14 },
   calendarValue: { color: color.navy, fontSize: 11, fontFamily: font.semibold },
   hairline: { height: 1, backgroundColor: color.line },
-  streakText: { color: color.coral, fontSize: 10, fontFamily: font.semibold },
-  weekRow: { flexDirection: 'row', gap: 5, marginTop: 9 },
-  weekDay: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 41, borderRadius: 7, backgroundColor: '#F5F4F2' },
-  weekDayToday: { backgroundColor: color.navySoft, borderWidth: 1, borderColor: color.navy },
-  weekLabel: { color: color.muted, fontSize: 9, fontFamily: font.body },
-  weekMark: { color: color.green, fontSize: 12, fontFamily: font.bold, marginTop: 3 },
-  weekMarkToday: { color: color.coral },
   lessonTag: { color: color.navy, backgroundColor: '#FFF2F4', borderRadius: 5, paddingHorizontal: 9, paddingVertical: 4, fontSize: 11, fontFamily: font.semibold },
   mobileLessonTag: { color: color.coral, backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#F8D6DC', paddingHorizontal: 8, paddingVertical: 3 },
   mobileLessonCard: { borderColor: '#E7D9DA', borderRadius: 16, padding: 16 },
@@ -447,9 +440,4 @@ const styles = StyleSheet.create({
   guideFooter: { paddingHorizontal: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F0E2E3', backgroundColor: '#FFFFFF' },
   guideConfirm: { minHeight: 52, borderRadius: 14, backgroundColor: '#DC2C4F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#F43F5E', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 4 },
   guideConfirmText: { color: '#FFFFFF', fontSize: 15, lineHeight: 21, fontFamily: font.bold },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(19,27,46,0.5)', justifyContent: 'center', padding: 20 },
-  modalPanel: { backgroundColor: color.background, borderRadius: 18, padding: 15, maxHeight: '80%' },
-  modalTitle: { color: color.ink, fontSize: 16, fontFamily: font.bold, flex: 1 },
-  modalClose: { color: color.navy, fontSize: 12, fontFamily: font.semibold },
-  modalScroll: { marginTop: 12 },
 });
