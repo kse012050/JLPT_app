@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type AndroidSymbol, type SFSymbol } from 'expo-symbols';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const color = {
   background: '#FAF9F6', surface: '#FFFFFF', ink: '#252622', muted: '#666963',
@@ -42,6 +42,12 @@ const icons = {
   checkCircle: { android: 'check_circle', ios: 'checkmark.circle' },
   lock: { android: 'lock', ios: 'lock' },
   bulb: { android: 'lightbulb', ios: 'lightbulb' },
+  translate: { android: 'translate', ios: 'character.book.closed' },
+  grammar: { android: 'auto_stories', ios: 'text.book.closed' },
+  headphones: { android: 'headphones', ios: 'headphones' },
+  quiz: { android: 'quiz', ios: 'questionmark.square' },
+  close: { android: 'close', ios: 'xmark' },
+  forward: { android: 'arrow_forward', ios: 'arrow.right' },
 } satisfies Record<string, IconName>;
 
 const examDay = new Date(2026, 11, 6);
@@ -100,9 +106,9 @@ function MobileExam({ days, onGuide, onCalendar }: { days: number; onGuide: () =
 }
 
 const guideItems = [
-  { title: '문자·어휘', time: '30분 / 60점', detail: '한자 읽기·표기와 문맥 규정', tint: color.navy },
-  { title: '문법 형식', time: '독해 통합', detail: '문맥에 맞는 문법 형식 판단', tint: color.coral },
-  { title: '독해 지문', time: '문법 포함 70분', detail: '단문·중문·장문과 정보 검색', tint: color.amber },
+  { title: '문자·어휘', time: '30분', detail: '한자 읽기·표기와 문맥 규정', tint: color.navy },
+  { title: '문법 형식', time: '독해와 합쳐 70분', detail: '문맥에 맞는 문법 형식 판단', tint: color.coral },
+  { title: '독해 지문', time: '문법과 합쳐 70분', detail: '단문·중문·장문과 정보 검색', tint: color.amber },
   { title: '청해 리스닝', time: '40분 / 60점', detail: '과제 이해와 즉각 응답', tint: color.green },
 ];
 
@@ -177,8 +183,57 @@ function DoctorCard() {
   return <Card style={styles.doctorCard}><View style={styles.doctorHeading}><Icon name={icons.bulb} tint={color.coral} size={19} /><Text style={styles.doctorTitle}>한국어 닥터 해설 · 뉘앙스 족보</Text></View><View style={styles.doctorBody}><Text style={styles.doctorQuestion}>‘〜わけにはいかない’와 ‘〜できない’의 차이</Text><Text style={styles.doctorLine}>できない: 능력이나 신체적 이유로 할 수 없음</Text><Text style={styles.doctorLine}>わけにはいかない: 상황·체면·의리 때문에 할 수 없음</Text></View><Text style={styles.doctorFooter}>JLPT N3에서 헷갈리기 쉬운 문형을 짧게 비교해 보세요.</Text></Card>;
 }
 
-function InfoModal({ kind, onClose, days }: { kind: 'guide' | 'calendar' | null; onClose: () => void; days: number }) {
-  return <Modal visible={kind !== null} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><View style={styles.modalPanel}><View style={styles.between}><Text style={styles.modalTitle}>{kind === 'guide' ? 'JLPT 시험 구성 1분 가이드' : '시험 일정 및 학습 달력'}</Text><Pressable onPress={onClose} accessibilityLabel="닫기"><Text style={styles.modalClose}>닫기</Text></Pressable></View><ScrollView style={styles.modalScroll}>{kind === 'guide' ? <GuideCard /> : <CalendarCard days={days} />}</ScrollView></View></View></Modal>;
+const examSections = [
+  { title: '1. 문자·어휘 (언어지식)', subtitle: '한자 표기 및 문맥 어휘력', time: '30분', icon: icons.translate, questions: '한자 읽기, 표기, 문맥 규정, 유의어 교체', tip: '매일 15분 필수 한자 100자 반복이 점수 직결!' },
+  { title: '2. 문법 형식 (언어지식)', subtitle: '문장 구성 및 글 맥락', time: '독해와 합쳐 70분', icon: icons.grammar, questions: '문법 형태 판단, 문장 구성(순서 맞추기), 글 흐름 완성', tip: '접속 형태와 뉘앙스 차이가 출제 포인트' },
+  { title: '3. 독해 (단문·중문·장문)', subtitle: '지문 독해 및 정보 검색 · 60점', time: '문법과 합쳐 70분', icon: icons.guide, questions: '단·중문 내용 이해, 주장의 이유 찾기, 공고문 정보 검색', tip: '질문 먼저 읽고 키워드를 본문에서 스캔하는 전략 필수' },
+  { title: '4. 청해 (리스닝)', subtitle: '실시간 청취 및 순발력', time: '40분 / 60점', icon: icons.headphones, questions: '과제 이해, 포인트 이해, 개요 이해, 즉각 응답', tip: '메모하며 듣기 & 특히 마지막 1~2초 즉각 응답 훈련' },
+];
+
+function ExamSection({ item }: { item: typeof examSections[number] }) {
+  return <View style={styles.examSection}>
+    <View style={styles.examSectionHeading}>
+      <View style={styles.examSectionIcon}><Icon name={item.icon} tint="#B90538" size={18} /></View>
+      <View style={styles.fill}><Text style={styles.examSectionTitle}>{item.title}</Text><Text style={styles.examSectionSubtitle}>{item.subtitle}</Text></View>
+      <Text style={styles.examSectionTime}>{item.time}</Text>
+    </View>
+    <View style={styles.examQuestions}><Icon name={icons.quiz} tint="#B90538" size={16} /><Text style={styles.examQuestionsText}><Text style={styles.examEmphasis}>핵심 문제 유형: </Text>{item.questions}</Text></View>
+    <View style={styles.examTip}><Icon name={icons.bulb} tint="#006C49" size={16} /><Text style={styles.examTipText}><Text style={styles.examTipLead}>초보자 팁: </Text>{item.tip}</Text></View>
+  </View>;
+}
+
+function GuideModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { bottom } = useSafeAreaInsets();
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <View style={styles.guideBackdrop}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="가이드 닫기" />
+      <View style={styles.guideSheet}>
+        <View style={styles.guideHandle} />
+        <View style={styles.guideHeader}>
+          <View style={styles.fill}>
+            <View style={styles.guideBadge}><View style={styles.guideBadgeDot} /><Text style={styles.guideBadgeText}>초보자 필독 · N3 기준 180점 만점</Text></View>
+            <Text style={styles.guideSheetTitle}>JLPT 시험 구성 가이드</Text>
+            <Text style={styles.guideSheetSubtitle}>과락 기준(과목별 19점 미만)을 피하고 시간 배분이 핵심입니다. 각 영역별 특성과 공략법을 확인하세요.</Text>
+          </View>
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="가이드 닫기" style={styles.guideClose}><Icon name={icons.close} tint="#5B4041" size={22} /></Pressable>
+        </View>
+        <ScrollView style={styles.guideScroll} contentContainerStyle={styles.guideScrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.passCard}>
+            <View style={styles.passHeading}><View style={styles.passIcon}><Icon name={icons.checkCircle} tint="#FFFFFF" size={18} /></View><Text style={styles.passTitle}>합격 기준 및 과락 안내</Text><Text style={styles.passRequired}>필수 요건</Text></View>
+            <View style={styles.passRow}><Text style={styles.passRowLabel}>합격 커트라인</Text><Text style={styles.passScore}>총점 95점 <Text style={styles.passScoreTotal}>/ 180점 만점</Text></Text></View>
+            <View style={styles.passRule}><View style={styles.passRuleHeading}><Icon name={icons.checkCircle} tint="#006C49" size={16} /><Text style={styles.passRuleTitle}>각 영역별(언어지식·독해·청해) 기준</Text></View><Text style={styles.passRuleText}>전 과목 <Text style={styles.passRuleStrong}>최소 19점 이상</Text> 획득 필수</Text><Text style={styles.passRuleNote}>※ 총점이 95점을 넘어도 한 과목이라도 19점 미만이면 불합격(과락)</Text></View>
+          </View>
+          {examSections.map(item => <ExamSection key={item.title} item={item} />)}
+          <View style={styles.examReminder}><View style={styles.examReminderIcon}><Icon name={icons.check} tint="#006C49" size={16} /></View><Text style={styles.examReminderText}>마킹 시간은 별도로 주어지지 않으므로 <Text style={styles.examEmphasis}>문제를 풀며 즉시 OMR 표기</Text>하세요.</Text></View>
+        </ScrollView>
+        <View style={[styles.guideFooter, { paddingBottom: Math.max(bottom, 16) }]}><Pressable style={styles.guideConfirm} onPress={onClose} accessibilityRole="button"><Text style={styles.guideConfirmText}>이해했어요, 학습 시작하기</Text><Icon name={icons.forward} tint="#FFFFFF" size={20} /></Pressable></View>
+      </View>
+    </View>
+  </Modal>;
+}
+
+function CalendarModal({ visible, onClose, days }: { visible: boolean; onClose: () => void; days: number }) {
+  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><View style={styles.modalPanel}><View style={styles.between}><Text style={styles.modalTitle}>시험 일정 및 학습 달력</Text><Pressable onPress={onClose} accessibilityLabel="닫기"><Text style={styles.modalClose}>닫기</Text></Pressable></View><ScrollView style={styles.modalScroll}><CalendarCard days={days} /></ScrollView></View></View></Modal>;
 }
 
 export default function HomeScreen() {
@@ -187,7 +242,7 @@ export default function HomeScreen() {
   const days = daysToExam();
   const [modal, setModal] = useState<'guide' | 'calendar' | null>(null);
 
-  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => setModal('calendar')} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><InfoModal kind={modal} onClose={() => setModal(null)} days={days} /></SafeAreaView>;
+  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => setModal('calendar')} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><GuideModal visible={modal === 'guide'} onClose={() => setModal(null)} /><CalendarModal visible={modal === 'calendar'} onClose={() => setModal(null)} days={days} /></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
@@ -347,6 +402,51 @@ const styles = StyleSheet.create({
   doctorQuestion: { color: color.ink, fontSize: 12, fontFamily: font.semibold },
   doctorLine: { color: color.muted, fontSize: 11, lineHeight: 17, fontFamily: font.body },
   doctorFooter: { color: color.muted, fontSize: 10, fontFamily: font.body, marginTop: 10 },
+  guideBackdrop: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(41,48,64,0.6)' },
+  guideSheet: { width: '100%', maxWidth: 440, maxHeight: '90%', backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', shadowColor: '#E11D48', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 16 },
+  guideHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E3BDBF', alignSelf: 'center', marginTop: 11, marginBottom: 7 },
+  guideHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0E2E3' },
+  guideBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFDADB', borderWidth: 1, borderColor: '#E3BDBF', borderRadius: 16, paddingHorizontal: 9, paddingVertical: 3 },
+  guideBadgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#B90538' },
+  guideBadgeText: { color: '#B90538', fontSize: 10, lineHeight: 14, fontFamily: font.bold },
+  guideSheetTitle: { color: '#141B2B', fontSize: 18, lineHeight: 26, fontFamily: font.bold, marginTop: 9 },
+  guideSheetSubtitle: { color: '#5B4041', fontSize: 12, lineHeight: 19, fontFamily: font.body, marginTop: 4 },
+  guideClose: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  guideScroll: { flexShrink: 1 },
+  guideScrollContent: { paddingHorizontal: 20, paddingVertical: 16, gap: 12 },
+  passCard: { backgroundColor: '#FFF3F3', borderWidth: 1, borderColor: '#E3BDBF', borderRadius: 16, padding: 14, gap: 10 },
+  passHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  passIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#DC2C4F', alignItems: 'center', justifyContent: 'center' },
+  passTitle: { color: '#B90538', fontSize: 13, lineHeight: 18, fontFamily: font.bold, flex: 1 },
+  passRequired: { color: '#B90538', fontSize: 10, fontFamily: font.bold, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3BDBF', borderRadius: 12, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 3 },
+  passRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F0E2E3', borderRadius: 12, padding: 11 },
+  passRowLabel: { color: '#141B2B', fontSize: 12, fontFamily: font.medium },
+  passScore: { color: '#B90538', fontSize: 14, fontFamily: font.bold },
+  passScoreTotal: { color: '#63595C', fontSize: 10, fontFamily: font.body },
+  passRule: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F0E2E3', borderRadius: 12, padding: 11 },
+  passRuleHeading: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  passRuleTitle: { color: '#141B2B', fontSize: 11, lineHeight: 17, fontFamily: font.bold, flex: 1 },
+  passRuleText: { color: '#5B4041', fontSize: 12, lineHeight: 19, fontFamily: font.body, marginLeft: 21, marginTop: 4 },
+  passRuleStrong: { color: '#B90538', fontFamily: font.bold },
+  passRuleNote: { color: '#63595C', fontSize: 10, lineHeight: 16, fontFamily: font.body, marginLeft: 21, marginTop: 2 },
+  examSection: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EADCDD', borderRadius: 16, padding: 14, gap: 9, shadowColor: '#E11D48', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
+  examSectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  examSectionIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#E9EDFF', alignItems: 'center', justifyContent: 'center' },
+  examSectionTitle: { color: '#141B2B', fontSize: 12, lineHeight: 18, fontFamily: font.bold },
+  examSectionSubtitle: { color: '#63595C', fontSize: 10, lineHeight: 15, fontFamily: font.body },
+  examSectionTime: { maxWidth: 88, color: '#B90538', backgroundColor: '#FFDADB', borderWidth: 1, borderColor: '#E3BDBF', borderRadius: 14, overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 4, fontSize: 10, lineHeight: 14, textAlign: 'center', fontFamily: font.bold },
+  examQuestions: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#F9F9FF', borderWidth: 1, borderColor: '#F0E2E3', borderRadius: 10, padding: 9 },
+  examQuestionsText: { color: '#5B4041', fontSize: 11, lineHeight: 17, fontFamily: font.body, flex: 1 },
+  examEmphasis: { color: '#141B2B', fontFamily: font.bold },
+  examTip: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingHorizontal: 7 },
+  examTipText: { color: '#006C49', fontSize: 11, lineHeight: 17, fontFamily: font.medium, flex: 1 },
+  examTipLead: { fontFamily: font.bold },
+  examReminder: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9F9FF', borderWidth: 1, borderColor: '#F0E2E3', borderRadius: 14, padding: 12 },
+  examReminderIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#D7FBE6', alignItems: 'center', justifyContent: 'center' },
+  examReminderText: { color: '#5B4041', fontSize: 11, lineHeight: 17, fontFamily: font.body, flex: 1 },
+  guideFooter: { paddingHorizontal: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F0E2E3', backgroundColor: '#FFFFFF' },
+  guideConfirm: { minHeight: 52, borderRadius: 14, backgroundColor: '#DC2C4F', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#F43F5E', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 4 },
+  guideConfirmText: { color: '#FFFFFF', fontSize: 15, lineHeight: 21, fontFamily: font.bold },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(19,27,46,0.5)', justifyContent: 'center', padding: 20 },
   modalPanel: { backgroundColor: color.background, borderRadius: 18, padding: 15, maxHeight: '80%' },
   modalTitle: { color: color.ink, fontSize: 16, fontFamily: font.bold, flex: 1 },
