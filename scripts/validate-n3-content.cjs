@@ -69,7 +69,9 @@ for (const [level, expectedVocabulary, expectedGrammar] of [['N5', 674, 81], ['N
     for (const entry of entries) {
       const korean = translated?.[kind]?.[entry.id];
       if (!korean || !Array.isArray(korean.examples) || korean.examples.length !== entry.examples.length || korean.examples.some((example) => !example)) errors.push(`${level}/${kind}/${entry.id}: 한국어 예문 번역 누락`);
-      if (kind === 'vocabulary' && (!Array.isArray(korean?.meanings) || korean.meanings.length !== entry.meanings.length || korean.meanings.some((meaning) => !meaning))) errors.push(`${level}/${kind}/${entry.id}: 한국어 뜻 누락`);
+      if (kind === 'vocabulary' && (!Array.isArray(korean?.meanings) || !korean.meanings.length || korean.meanings.some((meaning) => !meaning))) errors.push(`${level}/${kind}/${entry.id}: 한국어 뜻 누락`);
+      if (kind === 'vocabulary' && korean?.meanings && new Set(korean.meanings).size !== korean.meanings.length) errors.push(`${level}/${kind}/${entry.id}: 한국어 뜻 중복`);
+      if (kind === 'vocabulary' && korean?.meanings?.some((meaning) => /[A-Za-z;]/.test(meaning))) errors.push(`${level}/${kind}/${entry.id}: 한국어 뜻에 영어 또는 세미콜론 포함`);
       if (kind === 'grammar' && (!korean?.meaning || !korean.formation || entry.notes && !korean.notes)) errors.push(`${level}/${kind}/${entry.id}: 한국어 문법 설명 누락`);
       if (!entry.id || entryIds.has(entry.id)) errors.push(`${level}/${kind}: 중복 또는 빈 ID ${entry.id}`);
       entryIds.add(entry.id);

@@ -1,6 +1,7 @@
 import reference from './openjlpt-n3-reference.json';
 import korean from './openjlpt-reference-ko.json';
 import { n3Units, type VocabularyEntry } from './n3';
+import { formatKoreanMeanings } from './korean-meaning';
 
 export type BankLevel = 'N5' | 'N4' | 'N3';
 export type BankWord = {
@@ -33,7 +34,7 @@ function fromReference(level: BankLevel): BankWord[] {
       word: entry.word,
       reading: entry.reading,
       meaningsEn: entry.meanings,
-      meaningKo: matched?.meaning ?? translated.meanings.join('; '),
+      meaningKo: matched?.meaning ?? formatKoreanMeanings(translated.meanings),
       examples: entry.examples.map((example, index) => ({ ja: example.ja, ko: translated.examples[index], tatoeba_id: example.tatoeba_id })),
       curatedExample: matched?.example,
       curatedTranslation: matched?.translation,

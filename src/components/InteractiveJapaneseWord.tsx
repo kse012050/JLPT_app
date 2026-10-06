@@ -1,3 +1,4 @@
+import * as Speech from 'expo-speech';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,9 +10,26 @@ type KanjiPopover = { character: string; x: number; y: number; width: number; he
 const popoverWidth = 220;
 const popoverHeight = 82;
 const margin = 12;
+let latestSpeechRequest = 0;
+
+async function speakJapanese(reading: string, onError: () => void) {
+  const request = ++latestSpeechRequest;
+  try {
+    await Speech.stop();
+    if (request !== latestSpeechRequest) return;
+    Speech.speak(reading, {
+      language: 'ja-JP',
+      rate: 0.9,
+      onError: () => { if (request === latestSpeechRequest) onError(); },
+    });
+  } catch {
+    if (request === latestSpeechRequest) onError();
+  }
+}
 
 export function InteractiveJapaneseWord({ word, reading }: { word: string; reading: string }) {
   const [readingOpen, setReadingOpen] = useState(false);
+  const [speechError, setSpeechError] = useState(false);
   const [popover, setPopover] = useState<KanjiPopover | null>(null);
   const characterRefs = useRef<Record<number, View | null>>({});
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -37,7 +55,8 @@ export function InteractiveJapaneseWord({ word, reading }: { word: string; readi
         ? <Pressable key={`${index}-${character}`} ref={(node) => { characterRefs.current[index] = node; }} onPress={() => showKanji(character, index)} accessibilityRole="button" accessibilityLabel={`${character} 한자 뜻과 음 보기`} style={s.characterButton}><Text style={s.word}>{character}</Text></Pressable>
         : <Text key={`${index}-${character}`} style={s.word}>{character}</Text>)}
     </View>
-    <Pressable onPress={() => { setPopover(null); setReadingOpen((open) => !open); }} accessibilityRole="button" accessibilityLabel={`${reading} 한글 발음 보기`} style={s.readingButton}><Text style={[s.reading, readingOpen && s.active]}>{reading} <Text style={s.hint}>눌러서 한글 발음 보기</Text></Text></Pressable>
+    <Pressable onPress={() => { setPopover(null); setReadingOpen(true); setSpeechError(false); void speakJapanese(reading, () => setSpeechError(true)); }} accessibilityRole="button" accessibilityLabel={`${reading} 일본어 발음 듣고 한글 표기 보기`} style={s.readingButton}><Text style={[s.reading, readingOpen && s.active]}>{reading} <Text style={s.hint}>눌러서 발음 듣기·한글 표기 보기</Text></Text></Pressable>
+    {speechError ? <Text style={s.speechError}>음성을 재생하지 못했습니다. 기기의 일본어 음성 설정을 확인해 주세요.</Text> : null}
     {readingOpen ? <View style={s.readingDetail} accessibilityLiveRegion="polite"><Text style={s.detailLabel}>한글 발음</Text><Text style={s.detailText}>{reading} → {kanaToHangul(reading)}</Text></View> : null}
     {popover ? <Modal transparent visible animationType="fade" onRequestClose={() => setPopover(null)}>
       <View style={s.overlay}>
@@ -60,6 +79,7 @@ const s = StyleSheet.create({
   readingButton: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
   reading: { color: '#E82E5A', fontFamily: 'NotoSansJP_400Regular', fontSize: 13 },
   hint: { color: '#797681', fontFamily: 'NotoSansKR_400Regular', fontSize: 10 },
+  speechError: { color: '#B90538', fontFamily: 'NotoSansKR_400Regular', fontSize: 10, marginTop: 3 },
   readingDetail: { backgroundColor: '#FFF0F4', borderRadius: 9, paddingHorizontal: 11, paddingVertical: 9, marginTop: 5 },
   detailLabel: { color: '#E82E5A', fontFamily: 'NotoSansKR_700Bold', fontSize: 10 },
   detailText: { color: '#201F24', fontFamily: 'NotoSansKR_600SemiBold', fontSize: 13, marginTop: 4 },

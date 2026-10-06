@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { InteractiveJapaneseWord } from '@/components/InteractiveJapaneseWord';
+import { formatKoreanMeanings } from '@/content/korean-meaning';
 import source from '@/content/openjlpt-n3-reference.json';
 import korean from '@/content/openjlpt-reference-ko.json';
 import { getReferenceProgress, saveReferenceProgress } from '@/storage/reference-progress';
@@ -83,7 +84,7 @@ export default function N3ReferenceScreen() {
     const grammarKo = kind === 'grammar' ? translated.levels[level].grammar[item.id] : null;
     return <View style={s.card}>
       {kind === 'vocabulary'
-        ? <><InteractiveJapaneseWord word={(item as Word).word} reading={(item as Word).reading} /><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{wordKo?.meanings.join(' · ')}</Text><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Word).word} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandButton}><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>
+        ? <><InteractiveJapaneseWord word={(item as Word).word} reading={(item as Word).reading} /><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{wordKo ? formatKoreanMeanings(wordKo.meanings) : ''}</Text><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Word).word} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandButton}><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>
         : <Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Grammar).pattern} 자세히 보기`}><View style={s.cardTop}><Text style={s.word}>{(item as Grammar).pattern}</Text><Text style={s.chevron}>{isExpanded ? '⌃' : '⌄'}</Text></View><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{(item as Grammar).meaningKo ?? grammarKo?.meaning}</Text></Pressable>}
       {isExpanded ? <View style={s.detail}>
         {kind === 'grammar' && grammarKo ? <><Text style={s.detailLabel}>접속 형태</Text><Text style={s.detailText}>{grammarKo.formation}</Text>{grammarKo.notes ? <><Text style={s.detailLabel}>설명</Text><Text style={s.detailText}>{grammarKo.notes}</Text></> : null}</> : null}
