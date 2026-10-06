@@ -1,8 +1,12 @@
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type AndroidSymbol, type SFSymbol } from 'expo-symbols';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { n5VocabularyUnits } from '@/content/vocabulary';
+import { getCompletedVocabularyUnits } from '@/storage/vocabulary-progress';
 
 type Level = 'N5' | 'N4' | 'N3' | 'N2' | 'N1';
 type IconName = { android: AndroidSymbol; ios: SFSymbol };
@@ -28,16 +32,28 @@ function Icon({ name, tint = color.ink, size = 18 }: { name: IconName; tint?: st
   return <SymbolView name={{ android: name.android, ios: name.ios, web: name.android }} tintColor={tint} size={size} />;
 }
 
-function ProgressTrack() {
-  return <View style={s.progressTrack} accessibilityLabel="학습 기록이 아직 없습니다" />;
+function ProgressTrack({ progress = 0 }: { progress?: number }) {
+  return <View style={s.progressTrack} accessibilityLabel={`진도 ${progress}%`}><View style={[s.progressFill, { width: `${progress}%` }]} /></View>;
 }
 
 export default function CourseScreen() {
-  const [level, setLevel] = useState<Level>('N3');
+  const [level, setLevel] = useState<Level>('N5');
   const [levelMenuOpen, setLevelMenuOpen] = useState(false);
   const [selectedArea, setSelectedArea] = useState<(typeof areas)[number]['id'] | null>(null);
   const [lessonOpen, setLessonOpen] = useState(false);
+  const [completedVocabulary, setCompletedVocabulary] = useState<string[]>([]);
   const activeArea = areas.find((area) => area.id === selectedArea);
+  const completedUnitCount = n5VocabularyUnits.filter((unit) => completedVocabulary.includes(unit.id)).length;
+  const vocabularyProgress = Math.round((completedUnitCount / n5VocabularyUnits.length) * 100);
+  const recommendedUnit = n5VocabularyUnits.find((unit) => !completedVocabulary.includes(unit.id)) ?? n5VocabularyUnits[0];
+  const recommendedWord = recommendedUnit.words[0];
+  const vocabularyDone = completedUnitCount === n5VocabularyUnits.length;
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    getCompletedVocabularyUnits().then((ids) => { if (active) setCompletedVocabulary(ids); }).catch(() => {});
+    return () => { active = false; };
+  }, []));
 
   return <SafeAreaView style={s.screen} edges={['top']}>
     <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
@@ -52,25 +68,25 @@ export default function CourseScreen() {
         </View>
 
         <View style={s.overview}>
-          <View style={s.overviewTop}><View style={s.planIcon}><Text style={s.planIconText}>P</Text></View><View style={s.fill}><Text style={s.overviewTitle}>{level} 학습 과정</Text><Text style={s.overviewSubtitle}>나에게 맞는 순서로 차근차근 시작해요</Text></View><Text style={s.startBadge}>학습 시작 전</Text></View>
-          <ProgressTrack /><View style={s.progressLabels}><Text style={s.progressNote}>학습 기록이 쌓이면 진도를 확인할 수 있어요</Text><Text style={s.progressNumber}>0%</Text></View>
+          <View style={s.overviewTop}><View style={s.planIcon}><Text style={s.planIconText}>P</Text></View><View style={s.fill}><Text style={s.overviewTitle}>{level} 학습 과정</Text><Text style={s.overviewSubtitle}>나에게 맞는 순서로 차근차근 시작해요</Text></View><Text style={s.startBadge}>{level === 'N5' ? '문자·어휘 학습 가능' : '학습 준비 중'}</Text></View>
+          <ProgressTrack progress={level === 'N5' ? vocabularyProgress : 0} /><View style={s.progressLabels}><Text style={s.progressNote}>{level === 'N5' ? `문자·어휘 ${completedUnitCount}/${n5VocabularyUnits.length}개 단원 완료` : '이 레벨의 학습 자료는 준비 중입니다'}</Text><Text style={s.progressNumber}>{level === 'N5' ? vocabularyProgress : 0}%</Text></View>
         </View>
 
         <View style={s.recommend}>
-          <View style={s.recommendMeta}><Text style={s.recommendBadge}>학습 미리보기</Text><Text style={s.recommendLevel}>문법 예시</Text><Text style={s.recommendPreview}>샘플 콘텐츠</Text></View>
-          <Text style={s.recommendEyebrow}>예시 표현 · 문법</Text><Text style={s.recommendJapanese}>〜わけにはいかない</Text><Text style={s.recommendMeaning}>사회적 통념이나 의리상 ~할 수는 없다</Text>
-          <View style={s.example}><Text style={s.exampleLabel}>대표 예문</Text><Text style={s.exampleJapanese}>休むわけにはいかない。</Text><Text style={s.exampleTranslation}>쉴 수는 없다.</Text></View>
-          <Text style={s.recommendDescription}>실제 학습 콘텐츠와 진도 저장 기능은 준비 중입니다. 표현을 먼저 살펴보세요.</Text>
-          <Pressable style={s.recommendButton} onPress={() => setLessonOpen(true)} accessibilityRole="button"><LinearGradient colors={['#F64E73', '#E82E5A', '#D91E4B']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={s.buttonGradient} /><Text style={s.recommendButtonText}>예시 학습 보기</Text><Icon name={icons.play} tint={color.white} size={18} /></Pressable>
+          <View style={s.recommendMeta}><Text style={s.recommendBadge}>{level === 'N5' ? '오늘의 추천 학습' : '학습 미리보기'}</Text><Text style={s.recommendLevel}>{level === 'N5' ? '문자·어휘' : '문법 예시'}</Text><Text style={s.recommendPreview}>{level === 'N5' ? `${recommendedUnit.words.length}개 단어` : '샘플 콘텐츠'}</Text></View>
+          <Text style={s.recommendEyebrow}>{level === 'N5' ? `${recommendedUnit.title} · ${vocabularyDone ? '복습 단원' : '다음 단원'}` : '예시 표현 · 문법'}</Text><Text style={s.recommendJapanese}>{level === 'N5' ? `${recommendedWord.written} · ${recommendedWord.reading}` : '〜わけにはいかない'}</Text><Text style={s.recommendMeaning}>{level === 'N5' ? recommendedWord.meaning : '사회적 통념이나 의리상 ~할 수는 없다'}</Text>
+          <View style={s.example}><Text style={s.exampleLabel}>대표 예문</Text><Text style={s.exampleJapanese}>{level === 'N5' ? recommendedWord.example : '休むわけにはいかない。'}</Text><Text style={s.exampleTranslation}>{level === 'N5' ? recommendedWord.translation : '쉴 수는 없다.'}</Text></View>
+          <Text style={s.recommendDescription}>{level === 'N5' ? vocabularyDone ? '모든 단원을 완료했어요. 원하는 단원을 골라 다시 연습할 수 있어요.' : '단어를 살펴보고 읽기와 뜻 퀴즈로 확인해 보세요.' : '이 레벨의 실제 학습 자료는 준비 중입니다. 표현을 미리 살펴보세요.'}</Text>
+          <Pressable style={s.recommendButton} onPress={() => level === 'N5' ? router.push('/vocabulary') : setLessonOpen(true)} accessibilityRole="button"><LinearGradient colors={['#F64E73', '#E82E5A', '#D91E4B']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={s.buttonGradient} /><Text style={s.recommendButtonText}>{level === 'N5' ? vocabularyDone ? '문자·어휘 다시 공부하기' : '문자·어휘 학습 시작' : '예시 학습 보기'}</Text><Icon name={icons.play} tint={color.white} size={18} /></Pressable>
         </View>
 
         <Text style={s.sectionTitle}>영역별 집중 학습</Text><Text style={s.sectionSubtitle}>원하는 영역을 눌러 학습 내용을 살펴보세요</Text>
-        <View style={s.grid}>{areas.map((area) => <Pressable key={area.id} onPress={() => setSelectedArea(selectedArea === area.id ? null : area.id)} style={[s.areaCard, selectedArea === area.id && s.areaCardSelected]} accessibilityRole="button" accessibilityLabel={`${area.title} 학습 내용 보기`}>
-          <View style={s.areaTop}><View style={[s.areaIcon, { backgroundColor: area.soft }]}><Icon name={area.icon} tint={area.tint} size={19} /></View><Text style={s.areaStatus}>시작 전</Text></View>
-          <Text style={s.areaTitle}>{area.title}</Text><Text style={s.areaDescription}>{area.description}</Text><ProgressTrack /><View style={s.areaBottom}><Text style={s.areaPercent}>0%</Text><Text style={s.areaPreview}>내용 보기  ›</Text></View>
+        <View style={s.grid}>{areas.map((area) => <Pressable key={area.id} onPress={() => level === 'N5' && area.id === 'vocabulary' ? router.push('/vocabulary') : setSelectedArea(selectedArea === area.id ? null : area.id)} style={[s.areaCard, selectedArea === area.id && s.areaCardSelected]} accessibilityRole="button" accessibilityLabel={`${area.title} ${level === 'N5' && area.id === 'vocabulary' ? '학습 시작' : '학습 내용 보기'}`}>
+          <View style={s.areaTop}><View style={[s.areaIcon, { backgroundColor: area.soft }]}><Icon name={area.icon} tint={area.tint} size={19} /></View><Text style={s.areaStatus}>{level === 'N5' && area.id === 'vocabulary' ? '학습 가능' : '준비 중'}</Text></View>
+          <Text style={s.areaTitle}>{area.title}</Text><Text style={s.areaDescription}>{area.description}</Text><ProgressTrack progress={level === 'N5' && area.id === 'vocabulary' ? vocabularyProgress : 0} /><View style={s.areaBottom}><Text style={s.areaPercent}>{level === 'N5' && area.id === 'vocabulary' ? vocabularyProgress : 0}%</Text><Text style={s.areaPreview}>{level === 'N5' && area.id === 'vocabulary' ? '학습하기  ›' : '내용 보기  ›'}</Text></View>
         </Pressable>)}</View>
         {activeArea ? <View style={s.areaDetail}><View style={s.detailHeader}><Icon name={activeArea.icon} tint={activeArea.tint} size={19} /><Text style={s.detailTitle}>{activeArea.title} 학습 안내</Text><Pressable onPress={() => setSelectedArea(null)} accessibilityRole="button" accessibilityLabel="학습 안내 닫기"><Icon name={icons.close} tint={color.muted} size={18} /></Pressable></View><Text style={s.detailText}>{activeArea.detail}</Text><Text style={s.detailFootnote}>이 영역의 학습 콘텐츠는 준비 중입니다.</Text></View> : null}
-        <View style={s.footer}><View style={s.footerIcon}><Icon name={icons.sparkle} tint={color.green} size={18} /></View><View style={s.fill}><Text style={s.footerTitle}>한 걸음씩, 꾸준히 이어가요</Text><Text style={s.footerText}>학습이 시작되면 영역별 진도를 이곳에서 볼 수 있어요.</Text></View></View>
+        <View style={s.footer}><View style={s.footerIcon}><Icon name={icons.sparkle} tint={color.green} size={18} /></View><View style={s.fill}><Text style={s.footerTitle}>한 걸음씩, 꾸준히 이어가요</Text><Text style={s.footerText}>{level === 'N5' ? `문자·어휘 ${completedUnitCount}개 단원을 완료했어요. 단원을 눌러 언제든 복습할 수 있어요.` : '학습 자료가 추가되면 영역별 진도를 이곳에서 볼 수 있어요.'}</Text></View></View>
       </View>
     </ScrollView>
     <Modal visible={lessonOpen} animationType="slide" transparent onRequestClose={() => setLessonOpen(false)}><View style={s.modalBackdrop}><SafeAreaView style={s.modalSheet} edges={['bottom']}>
@@ -86,7 +102,7 @@ const s = StyleSheet.create({
   header: { height: 57, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 2 }, headerSide: { width: 50, alignItems: 'flex-end' }, headerTitle: { color: color.ink, fontSize: 17, fontFamily: font.bold },
   levelButton: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FCE5EB', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 }, levelButtonText: { color: '#B90538', fontSize: 11, fontFamily: font.bold },
   levelMenu: { position: 'absolute', right: 0, top: 31, width: 80, backgroundColor: color.white, borderRadius: 12, borderWidth: 1, borderColor: color.line, padding: 4, elevation: 6, shadowColor: '#34242B', shadowOpacity: 0.12, shadowRadius: 8 }, levelOption: { paddingVertical: 8, alignItems: 'center', borderRadius: 8 }, levelOptionActive: { backgroundColor: color.softPink }, levelOptionText: { color: color.ink, fontSize: 12, fontFamily: font.medium }, levelOptionTextActive: { color: color.pink, fontFamily: font.bold },
-  overview: { backgroundColor: color.white, borderWidth: 1, borderColor: color.line, borderRadius: 15, padding: 14, marginBottom: 14 }, overviewTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 }, planIcon: { width: 28, height: 28, backgroundColor: color.green, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, planIconText: { color: color.white, fontFamily: font.number, fontSize: 13 }, overviewTitle: { color: color.ink, fontSize: 13, fontFamily: font.bold }, overviewSubtitle: { color: color.muted, fontSize: 10, fontFamily: font.body, marginTop: 2 }, startBadge: { color: color.green, fontSize: 10, fontFamily: font.semi, backgroundColor: color.softGreen, borderRadius: 12, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 4 }, progressTrack: { height: 6, backgroundColor: '#E8E9EB', borderRadius: 4 }, progressLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 7 }, progressNote: { color: color.muted, fontSize: 10, fontFamily: font.body, flex: 1 }, progressNumber: { color: color.green, fontSize: 10, fontFamily: font.number },
+  overview: { backgroundColor: color.white, borderWidth: 1, borderColor: color.line, borderRadius: 15, padding: 14, marginBottom: 14 }, overviewTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 }, planIcon: { width: 28, height: 28, backgroundColor: color.green, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, planIconText: { color: color.white, fontFamily: font.number, fontSize: 13 }, overviewTitle: { color: color.ink, fontSize: 13, fontFamily: font.bold }, overviewSubtitle: { color: color.muted, fontSize: 10, fontFamily: font.body, marginTop: 2 }, startBadge: { color: color.green, fontSize: 10, fontFamily: font.semi, backgroundColor: color.softGreen, borderRadius: 12, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 4 }, progressTrack: { height: 6, backgroundColor: '#E8E9EB', borderRadius: 4, overflow: 'hidden' }, progressFill: { height: 6, backgroundColor: color.green, borderRadius: 4 }, progressLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 7 }, progressNote: { color: color.muted, fontSize: 10, fontFamily: font.body, flex: 1 }, progressNumber: { color: color.green, fontSize: 10, fontFamily: font.number },
   recommend: { backgroundColor: color.white, borderWidth: 1, borderColor: '#F4D9E0', borderRadius: 18, padding: 16, shadowColor: '#C42A51', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 2 }, recommendMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 }, recommendBadge: { color: color.white, backgroundColor: color.pink, borderRadius: 20, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 4, fontSize: 10, fontFamily: font.bold }, recommendLevel: { color: color.pink, backgroundColor: color.softPink, borderRadius: 12, overflow: 'hidden', paddingHorizontal: 7, paddingVertical: 4, fontSize: 10, fontFamily: font.semi }, recommendPreview: { color: color.muted, fontSize: 10, fontFamily: font.body, marginLeft: 'auto' }, recommendEyebrow: { color: color.pink, fontSize: 10, fontFamily: font.semi, marginTop: 12 }, recommendJapanese: { color: color.ink, fontSize: 23, lineHeight: 34, fontFamily: font.jp, marginTop: 1 }, recommendMeaning: { color: '#5F5B63', fontSize: 12, fontFamily: font.body, marginTop: 2 }, example: { backgroundColor: '#F4F3FA', borderRadius: 11, padding: 12, marginTop: 12 }, exampleLabel: { color: '#77727E', fontSize: 10, fontFamily: font.semi }, exampleJapanese: { color: color.ink, fontSize: 13, lineHeight: 22, fontFamily: font.jp, marginTop: 3 }, exampleTranslation: { color: color.muted, fontSize: 10, fontFamily: font.body, marginTop: 2 }, recommendDescription: { color: color.muted, fontSize: 10, lineHeight: 17, fontFamily: font.body, marginTop: 12 }, recommendButton: { height: 44, borderRadius: 8, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 11 }, buttonGradient: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }, recommendButtonText: { color: color.white, fontSize: 13, fontFamily: font.bold },
   sectionTitle: { color: color.ink, fontSize: 17, fontFamily: font.bold, marginTop: 20 }, sectionSubtitle: { color: color.muted, fontSize: 10, fontFamily: font.body, marginTop: 4, marginBottom: 11 }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 }, areaCard: { width: '48%', flexGrow: 1, minWidth: 0, backgroundColor: color.white, borderWidth: 1, borderColor: color.line, borderRadius: 14, padding: 13 }, areaCardSelected: { borderColor: color.pink }, areaTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, areaIcon: { width: 29, height: 29, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }, areaStatus: { color: color.green, fontSize: 9, fontFamily: font.semi, backgroundColor: color.softGreen, borderRadius: 10, overflow: 'hidden', paddingHorizontal: 6, paddingVertical: 3 }, areaTitle: { color: color.ink, fontSize: 14, fontFamily: font.bold, marginTop: 11 }, areaDescription: { color: color.muted, fontSize: 10, lineHeight: 15, fontFamily: font.body, minHeight: 30, marginTop: 4, marginBottom: 9 }, areaBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }, areaPercent: { color: color.green, fontSize: 10, fontFamily: font.number }, areaPreview: { color: color.muted, fontSize: 9, fontFamily: font.medium }, areaDetail: { backgroundColor: color.white, borderWidth: 1, borderColor: '#F8D7E1', borderRadius: 13, padding: 14, marginTop: 10 }, detailHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 }, detailTitle: { flex: 1, color: color.ink, fontSize: 13, fontFamily: font.bold }, detailText: { color: '#5F5B63', fontSize: 11, lineHeight: 19, fontFamily: font.body, marginTop: 8 }, detailFootnote: { color: color.pink, fontSize: 10, fontFamily: font.medium, marginTop: 8 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: color.white, borderWidth: 1, borderColor: color.line, borderRadius: 13, padding: 12, marginTop: 13 }, footerIcon: { width: 28, height: 28, backgroundColor: color.softGreen, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, footerTitle: { color: color.ink, fontSize: 10, fontFamily: font.semi }, footerText: { color: color.muted, fontSize: 9, fontFamily: font.body, marginTop: 2 },
