@@ -23,6 +23,10 @@ function RootNavigator() {
     <Stack.Protected guard={complete}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="vocabulary" />
+      <Stack.Screen name="n3-study" />
+      <Stack.Screen name="n3-kanji-drill" />
+      <Stack.Screen name="n3-reference" />
+      <Stack.Screen name="n3-vocabulary-bank" />
       <Stack.Screen name="login" options={{ presentation: 'modal' }} />
       <Stack.Screen name="onboarding-preview" />
     </Stack.Protected>

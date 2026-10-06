@@ -1,0 +1,181 @@
+import type { ChoiceQuestion, N3Unit } from './n3';
+
+// JLPT의 공식 지정 어휘 목록이 아닌, N3 수준의 일상·사회 상황을 바탕으로 직접 작성한 학습 자료.
+const baseVocabularyUnits: readonly N3Unit[] = [
+  { id: 'n3-vocab-school', area: 'vocabulary', title: '학교와 학습', description: '수업·과제·시험 안내에 쓰이는 말', vocabulary: [
+    { word: '授業', reading: 'じゅぎょう', meaning: '수업', example: '午後の授業は二時から始まります。', translation: '오후 수업은 두 시부터 시작합니다.' },
+    { word: '宿題', reading: 'しゅくだい', meaning: '숙제', example: '宿題を忘れたので、先生に謝りました。', translation: '숙제를 잊어서 선생님께 사과했습니다.' },
+    { word: '復習', reading: 'ふくしゅう', meaning: '복습', example: '習った漢字を家で復習します。', translation: '배운 한자를 집에서 복습합니다.' },
+    { word: '予習', reading: 'よしゅう', meaning: '예습', example: '次の課を予習しておいてください。', translation: '다음 과를 미리 예습해 두세요.' },
+    { word: '課題', reading: 'かだい', meaning: '과제', example: '今週の課題は短い作文を書くことです。', translation: '이번 주 과제는 짧은 작문을 쓰는 것입니다.' },
+    { word: '成績', reading: 'せいせき', meaning: '성적', example: '今学期の成績が発表されました。', translation: '이번 학기 성적이 발표되었습니다.' },
+    { word: '欠席', reading: 'けっせき', meaning: '결석', example: '熱があるので授業を欠席します。', translation: '열이 있어서 수업에 결석합니다.' },
+    { word: '合格', reading: 'ごうかく', meaning: '합격', example: '試験に合格して、とてもうれしいです。', translation: '시험에 합격해서 매우 기쁩니다.' },
+  ] },
+  { id: 'n3-vocab-health', area: 'vocabulary', title: '건강과 진료', description: '증상·진찰·생활 관리에 쓰이는 말', vocabulary: [
+    { word: '症状', reading: 'しょうじょう', meaning: '증상', example: 'どんな症状があるか医者に伝えました。', translation: '어떤 증상이 있는지 의사에게 전했습니다.' },
+    { word: '診察', reading: 'しんさつ', meaning: '진찰', example: '診察の前に受付をしてください。', translation: '진찰 전에 접수를 해 주세요.' },
+    { word: '治療', reading: 'ちりょう', meaning: '치료', example: 'けがの治療には時間がかかります。', translation: '부상 치료에는 시간이 걸립니다.' },
+    { word: '薬局', reading: 'やっきょく', meaning: '약국', example: '病院の隣の薬局で薬を買いました。', translation: '병원 옆 약국에서 약을 샀습니다.' },
+    { word: '体温', reading: 'たいおん', meaning: '체온', example: '朝と夜に体温を測ってください。', translation: '아침과 저녁에 체온을 재 주세요.' },
+    { word: '回復', reading: 'かいふく', meaning: '회복', example: '十分に休んだら、体力が回復しました。', translation: '충분히 쉬었더니 체력이 회복되었습니다.' },
+    { word: '予防', reading: 'よぼう', meaning: '예방', example: '風邪の予防のために手を洗います。', translation: '감기 예방을 위해 손을 씻습니다.' },
+    { word: '栄養', reading: 'えいよう', meaning: '영양', example: '栄養のある食事を心がけています。', translation: '영양가 있는 식사를 하려고 노력합니다.' },
+  ] },
+  { id: 'n3-vocab-home', area: 'vocabulary', title: '집과 생활', description: '이사·설비·생활비에 쓰이는 말', vocabulary: [
+    { word: '引っ越し', reading: 'ひっこし', meaning: '이사', example: '来月、駅の近くに引っ越します。', translation: '다음 달 역 근처로 이사합니다.' },
+    { word: '家賃', reading: 'やちん', meaning: '월세', example: 'この部屋は家賃が少し高いです。', translation: '이 방은 월세가 조금 비쌉니다.' },
+    { word: '設備', reading: 'せつび', meaning: '설비', example: '古い設備を新しくする工事が始まりました。', translation: '오래된 설비를 새로 바꾸는 공사가 시작되었습니다.' },
+    { word: '収納', reading: 'しゅうのう', meaning: '수납', example: 'この部屋には収納がたくさんあります。', translation: '이 방에는 수납 공간이 많습니다.' },
+    { word: '家具', reading: 'かぐ', meaning: '가구', example: '引っ越しの前に古い家具を売りました。', translation: '이사 전에 오래된 가구를 팔았습니다.' },
+    { word: '節約', reading: 'せつやく', meaning: '절약', example: '電気代を節約するために電気を消します。', translation: '전기 요금을 아끼려고 불을 끕니다.' },
+    { word: '近所', reading: 'きんじょ', meaning: '근처 이웃', example: '近所の人に新しい店を教えてもらいました。', translation: '동네 사람에게 새 가게를 소개받았습니다.' },
+    { word: '留守', reading: 'るす', meaning: '부재중', example: '午後は留守なので、荷物を受け取れません。', translation: '오후에는 집에 없어서 짐을 받을 수 없습니다.' },
+  ] },
+  { id: 'n3-vocab-office', area: 'vocabulary', title: '직장과 업무', description: '회의·담당·연락에 쓰이는 말', vocabulary: [
+    { word: '担当', reading: 'たんとう', meaning: '담당', example: '私は新しい企画を担当しています。', translation: '저는 새 기획을 담당하고 있습니다.' },
+    { word: '企画', reading: 'きかく', meaning: '기획', example: '来月のイベントの企画を考えます。', translation: '다음 달 행사 기획을 생각합니다.' },
+    { word: '依頼', reading: 'いらい', meaning: '의뢰', example: '翻訳の仕事を知人に依頼しました。', translation: '번역 일을 지인에게 의뢰했습니다.' },
+    { word: '報告', reading: 'ほうこく', meaning: '보고', example: '作業が終わったら結果を報告します。', translation: '작업이 끝나면 결과를 보고합니다.' },
+    { word: '対応', reading: 'たいおう', meaning: '대응', example: '担当者が問い合わせに対応しました。', translation: '담당자가 문의에 대응했습니다.' },
+    { word: '延期', reading: 'えんき', meaning: '연기', example: '会議は来週に延期されました。', translation: '회의가 다음 주로 연기되었습니다.' },
+    { word: '作業', reading: 'さぎょう', meaning: '작업', example: '今日の作業は午後五時に終わります。', translation: '오늘 작업은 오후 5시에 끝납니다.' },
+    { word: '進捗', reading: 'しんちょく', meaning: '진행 상황', example: '会議で作業の進捗を報告しました。', translation: '회의에서 작업 진행 상황을 보고했습니다.' },
+  ] },
+  { id: 'n3-vocab-public', area: 'vocabulary', title: '공공시설과 절차', description: '신청·이용·안내에 쓰이는 말', vocabulary: [
+    { word: '施設', reading: 'しせつ', meaning: '시설', example: 'この施設は夜九時まで利用できます。', translation: '이 시설은 밤 9시까지 이용할 수 있습니다.' },
+    { word: '申請', reading: 'しんせい', meaning: '신청', example: '利用するには事前に申請が必要です。', translation: '이용하려면 사전 신청이 필요합니다.' },
+    { word: '手続き', reading: 'てつづき', meaning: '절차', example: '住所変更の手続きをしました。', translation: '주소 변경 절차를 밟았습니다.' },
+    { word: '利用', reading: 'りよう', meaning: '이용', example: 'この部屋は予約すれば利用できます。', translation: '이 방은 예약하면 이용할 수 있습니다.' },
+    { word: '許可', reading: 'きょか', meaning: '허가', example: 'ここで写真を撮るには許可が必要です。', translation: '여기서 사진을 찍으려면 허가가 필요합니다.' },
+    { word: '禁止', reading: 'きんし', meaning: '금지', example: '館内での飲食は禁止されています。', translation: '관내에서의 음식물 섭취는 금지되어 있습니다.' },
+    { word: '案内', reading: 'あんない', meaning: '안내', example: '係の人が会場まで案内してくれました。', translation: '담당자가 행사장까지 안내해 주었습니다.' },
+    { word: '受付', reading: 'うけつけ', meaning: '접수', example: '受付は午後四時までです。', translation: '접수는 오후 4시까지입니다.' },
+  ] },
+  { id: 'n3-vocab-weather', area: 'vocabulary', title: '날씨와 자연', description: '예보·재해·환경에 쓰이는 말', vocabulary: [
+    { word: '予報', reading: 'よほう', meaning: '예보', example: '天気予報では午後から雨です。', translation: '일기예보에 따르면 오후부터 비가 옵니다.' },
+    { word: '気温', reading: 'きおん', meaning: '기온', example: '明日は気温が十度まで下がります。', translation: '내일은 기온이 10도까지 내려갑니다.' },
+    { word: '湿度', reading: 'しつど', meaning: '습도', example: '今日は湿度が高くて蒸し暑いです。', translation: '오늘은 습도가 높아서 무덥습니다.' },
+    { word: '台風', reading: 'たいふう', meaning: '태풍', example: '台風のため、電車が止まりました。', translation: '태풍 때문에 전철이 멈췄습니다.' },
+    { word: '地震', reading: 'じしん', meaning: '지진', example: '地震が起きたら机の下に入ります。', translation: '지진이 나면 책상 아래로 들어갑니다.' },
+    { word: '影響', reading: 'えいきょう', meaning: '영향', example: '雪の影響で飛行機が遅れました。', translation: '눈의 영향으로 비행기가 지연되었습니다.' },
+    { word: '自然', reading: 'しぜん', meaning: '자연', example: 'この島には豊かな自然が残っています。', translation: '이 섬에는 풍부한 자연이 남아 있습니다.' },
+    { word: '資源', reading: 'しげん', meaning: '자원', example: '水は大切な資源です。', translation: '물은 중요한 자원입니다.' },
+  ] },
+  { id: 'n3-vocab-feelings', area: 'vocabulary', title: '감정과 판단', description: '느낌·평가·결정에 쓰이는 말', vocabulary: [
+    { word: '緊張', reading: 'きんちょう', meaning: '긴장', example: '大勢の前で話すと緊張します。', translation: '많은 사람 앞에서 말하면 긴장됩니다.' },
+    { word: '不安', reading: 'ふあん', meaning: '불안', example: '初めての面接で少し不安です。', translation: '첫 면접이라 조금 불안합니다.' },
+    { word: '満足', reading: 'まんぞく', meaning: '만족', example: 'サービスの内容に満足しています。', translation: '서비스 내용에 만족하고 있습니다.' },
+    { word: '残念', reading: 'ざんねん', meaning: '유감', example: '試合が中止になって残念です。', translation: '경기가 취소되어 아쉽습니다.' },
+    { word: '驚く', reading: 'おどろく', meaning: '놀라다', example: '急な知らせに驚きました。', translation: '갑작스러운 소식에 놀랐습니다.' },
+    { word: '迷う', reading: 'まよう', meaning: '망설이다', example: 'どちらを選ぶか迷っています。', translation: '어느 쪽을 고를지 망설이고 있습니다.' },
+    { word: '期待', reading: 'きたい', meaning: '기대', example: '新しい仕事に期待しています。', translation: '새로운 일을 기대하고 있습니다.' },
+    { word: '納得', reading: 'なっとく', meaning: '납득', example: '説明を聞いて納得しました。', translation: '설명을 듣고 납득했습니다.' },
+  ] },
+  { id: 'n3-vocab-media', area: 'vocabulary', title: '정보와 매체', description: '기사·조사·전달에 쓰이는 말', vocabulary: [
+    { word: '記事', reading: 'きじ', meaning: '기사', example: '新聞でその記事を読みました。', translation: '신문에서 그 기사를 읽었습니다.' },
+    { word: '情報', reading: 'じょうほう', meaning: '정보', example: '正しい情報を集めることが大切です。', translation: '올바른 정보를 모으는 것이 중요합니다.' },
+    { word: '調査', reading: 'ちょうさ', meaning: '조사', example: '学生に通学時間の調査をしました。', translation: '학생들을 대상으로 통학 시간을 조사했습니다.' },
+    { word: '発表', reading: 'はっぴょう', meaning: '발표', example: '調査の結果をクラスで発表します。', translation: '조사 결과를 반에서 발표합니다.' },
+    { word: '原因', reading: 'げんいん', meaning: '원인', example: '事故の原因はまだ分かっていません。', translation: '사고 원인은 아직 밝혀지지 않았습니다.' },
+    { word: '内容', reading: 'ないよう', meaning: '내용', example: '記事の内容を短くまとめました。', translation: '기사 내용을 짧게 정리했습니다.' },
+    { word: '意見', reading: 'いけん', meaning: '의견', example: '会議で自分の意見を述べました。', translation: '회의에서 자신의 의견을 말했습니다.' },
+    { word: '伝える', reading: 'つたえる', meaning: '전하다', example: '変更した時間を全員に伝えてください。', translation: '변경된 시간을 모두에게 전해 주세요.' },
+  ] },
+  { id: 'n3-vocab-amount', area: 'vocabulary', title: '수량과 변화', description: '통계·비교·증감에 쓰이는 말', vocabulary: [
+    { word: '割合', reading: 'わりあい', meaning: '비율', example: '電車を利用する人の割合が増えました。', translation: '전철을 이용하는 사람의 비율이 늘었습니다.' },
+    { word: '平均', reading: 'へいきん', meaning: '평균', example: '一日の平均睡眠時間は七時間です。', translation: '하루 평균 수면 시간은 7시간입니다.' },
+    { word: '増加', reading: 'ぞうか', meaning: '증가', example: '観光客の数が年々増加しています。', translation: '관광객 수가 해마다 증가하고 있습니다.' },
+    { word: '減少', reading: 'げんしょう', meaning: '감소', example: 'この町の人口は減少しています。', translation: '이 마을의 인구는 감소하고 있습니다.' },
+    { word: '比較', reading: 'ひかく', meaning: '비교', example: '二つの商品の値段を比較します。', translation: '두 상품의 가격을 비교합니다.' },
+    { word: '以上', reading: 'いじょう', meaning: '이상', example: '十八歳以上なら参加できます。', translation: '18세 이상이면 참가할 수 있습니다.' },
+    { word: '以下', reading: 'いか', meaning: '이하', example: '荷物は十キロ以下にしてください。', translation: '짐은 10킬로그램 이하로 해 주세요.' },
+    { word: '約', reading: 'やく', meaning: '약', example: '駅まで歩いて約十分です。', translation: '역까지 걸어서 약 10분입니다.' },
+  ] },
+  { id: 'n3-vocab-travel-more', area: 'vocabulary', title: '여행과 숙박', description: '이동·예약·관광에 쓰이는 말', vocabulary: [
+    { word: '目的地', reading: 'もくてきち', meaning: '목적지', example: '目的地まであと三駅です。', translation: '목적지까지 세 정거장 남았습니다.' },
+    { word: '経由', reading: 'けいゆ', meaning: '경유', example: '大阪を経由して京都へ行きます。', translation: '오사카를 경유해서 교토로 갑니다.' },
+    { word: '交通費', reading: 'こうつうひ', meaning: '교통비', example: '交通費は会社が払ってくれます。', translation: '교통비는 회사에서 내 줍니다.' },
+    { word: '時刻表', reading: 'じこくひょう', meaning: '시간표', example: '駅で電車の時刻表を確認しました。', translation: '역에서 전철 시간표를 확인했습니다.' },
+    { word: '宿泊', reading: 'しゅくはく', meaning: '숙박', example: '駅前のホテルに宿泊します。', translation: '역 앞 호텔에서 숙박합니다.' },
+    { word: '観光', reading: 'かんこう', meaning: '관광', example: '週末は友人と市内を観光しました。', translation: '주말에는 친구와 시내를 관광했습니다.' },
+    { word: '料金', reading: 'りょうきん', meaning: '요금', example: '子どもの料金は大人の半額です。', translation: '어린이 요금은 어른의 반값입니다.' },
+    { word: '往復', reading: 'おうふく', meaning: '왕복', example: '往復の切符を一枚ください。', translation: '왕복 표 한 장 주세요.' },
+  ] },
+  { id: 'n3-vocab-relationships', area: 'vocabulary', title: '사람과 관계', description: '약속·협력·신뢰에 쓰이는 말', vocabulary: [
+    { word: '交流', reading: 'こうりゅう', meaning: '교류', example: '地域の人たちと交流する機会がありました。', translation: '지역 사람들과 교류할 기회가 있었습니다.' },
+    { word: '助言', reading: 'じょげん', meaning: '조언', example: '先生から勉強方法について助言をもらいました。', translation: '선생님께 공부 방법에 대한 조언을 받았습니다.' },
+    { word: '信頼', reading: 'しんらい', meaning: '신뢰', example: '彼は同僚から信頼されています。', translation: '그는 동료들에게 신뢰를 받고 있습니다.' },
+    { word: '紹介', reading: 'しょうかい', meaning: '소개', example: '先生が新しい学生を紹介しました。', translation: '선생님이 새 학생을 소개했습니다.' },
+    { word: '尊敬', reading: 'そんけい', meaning: '존경', example: '私は努力を続ける父を尊敬しています。', translation: '저는 계속 노력하는 아버지를 존경합니다.' },
+    { word: '謝罪', reading: 'しゃざい', meaning: '사과', example: '店は客に間違いを謝罪しました。', translation: '가게는 손님에게 실수를 사과했습니다.' },
+    { word: '誤解', reading: 'ごかい', meaning: '오해', example: '説明が足りなくて誤解が生まれました。', translation: '설명이 부족해서 오해가 생겼습니다.' },
+    { word: '態度', reading: 'たいど', meaning: '태도', example: '店員の丁寧な態度が印象に残りました。', translation: '점원의 정중한 태도가 인상에 남았습니다.' },
+  ] },
+  { id: 'n3-vocab-action', area: 'vocabulary', title: '행동과 상태', description: '독해와 청해에서 자주 만나는 동사', vocabulary: [
+    { word: '選ぶ', reading: 'えらぶ', meaning: '고르다', example: '条件に合う仕事を選びました。', translation: '조건에 맞는 일을 골랐습니다.' },
+    { word: '比べる', reading: 'くらべる', meaning: '비교하다', example: '二つの案を比べて決めましょう。', translation: '두 안을 비교해서 정합시다.' },
+    { word: '続ける', reading: 'つづける', meaning: '계속하다', example: '毎日少しずつ勉強を続けています。', translation: '매일 조금씩 공부를 계속하고 있습니다.' },
+    { word: '減らす', reading: 'へらす', meaning: '줄이다', example: 'ごみを減らす方法を考えます。', translation: '쓰레기를 줄이는 방법을 생각합니다.' },
+    { word: '増やす', reading: 'ふやす', meaning: '늘리다', example: '運動する時間を増やしました。', translation: '운동하는 시간을 늘렸습니다.' },
+    { word: '防ぐ', reading: 'ふせぐ', meaning: '막다', example: '事故を防ぐために確認します。', translation: '사고를 막기 위해 확인합니다.' },
+    { word: '認める', reading: 'みとめる', meaning: '인정하다', example: '自分の間違いを認めました。', translation: '자신의 잘못을 인정했습니다.' },
+    { word: '支える', reading: 'ささえる', meaning: '지탱하다', example: '家族がいつも私を支えてくれます。', translation: '가족이 언제나 저를 지지해 줍니다.' },
+  ] },
+];
+
+const reviewQuestions: Record<string, readonly ChoiceQuestion[]> = {
+  'n3-vocab-school': [
+    { kind: '유의 표현', prompt: '「復習」と意味が近いものはどれですか。', choices: ['習ったことをもう一度勉強すること', '授業の前に初めて読むこと', '学校を休むこと', '試験の結果を知らせること'], answer: '習ったことをもう一度勉強すること', explanation: '復習는 이미 배운 내용을 다시 공부하는 것입니다.' },
+    { kind: '용법', prompt: '「課題」の使い方として正しいものはどれですか。', choices: ['今日の課題をノートに書いた。', '課題を駅まで運転した。', '課題が空から降ってきた。', '課題を一杯飲んだ。'], answer: '今日の課題をノートに書いた。', explanation: '課題는 해결하거나 제출해야 할 과제입니다.' },
+  ],
+  'n3-vocab-health': [
+    { kind: '유의 표현', prompt: '「回復した」と意味が近いものはどれですか。', choices: ['よくなった', '悪くなった', '始まった', '忘れた'], answer: 'よくなった', explanation: '回復する는 아픈 상태나 체력 등이 다시 좋아지는 것입니다.' },
+    { kind: '용법', prompt: '「症状」の使い方として正しいものはどれですか。', choices: ['熱やせきなどの症状を医者に話した。', '駅の症状に電車が着いた。', '症状を三枚買った。', '明日の症状は晴れだ。'], answer: '熱やせきなどの症状を医者に話した。', explanation: '症状는 열·기침처럼 몸에 나타나는 상태입니다.' },
+  ],
+  'n3-vocab-home': [
+    { kind: '유의 표현', prompt: '「留守にする」と意味が近いものはどれですか。', choices: ['家にいない', '家を建てる', '家で眠る', '家を掃除する'], answer: '家にいない', explanation: '留守にする는 집을 비운다는 뜻입니다.' },
+    { kind: '용법', prompt: '「家賃」の使い方として正しいものはどれですか。', choices: ['毎月末に家賃を払う。', '家賃を飲んで休む。', '家賃に乗って帰る。', '家賃で手紙を読む。'], answer: '毎月末に家賃を払う。', explanation: '家賃는 집이나 방을 빌려 쓰고 내는 돈입니다.' },
+  ],
+  'n3-vocab-office': [
+    { kind: '유의 표현', prompt: '「延期になった」と意味が近いものはどれですか。', choices: ['予定より後の日になった', '予定より早く始まった', '予定どおり終わった', '予定が決まらなかった'], answer: '予定より後の日になった', explanation: '延期는 예정된 일을 뒤로 미루는 것입니다.' },
+    { kind: '용법', prompt: '「担当」の使い方として正しいものはどれですか。', choices: ['私が受付を担当します。', '雨が強く担当しています。', '担当を一杯飲みました。', '駅まで担当で行きます。'], answer: '私が受付を担当します。', explanation: '担当する는 어떤 업무를 맡는다는 뜻입니다.' },
+  ],
+  'n3-vocab-public': [
+    { kind: '유의 표현', prompt: '「利用する」と意味が近いものはどれですか。', choices: ['使う', '捨てる', '直す', '断る'], answer: '使う', explanation: '利用する는 시설이나 서비스를 사용하는 것입니다.' },
+    { kind: '용법', prompt: '「申請」の使い方として正しいものはどれですか。', choices: ['市役所に利用許可を申請した。', '朝ご飯を申請して食べた。', '鳥が空を申請している。', '駅を申請して歩いた。'], answer: '市役所に利用許可を申請した。', explanation: '申請する는 허가·증명 등을 공식적으로 요청할 때 씁니다.' },
+  ],
+  'n3-vocab-weather': [
+    { kind: '유의 표현', prompt: '「影響があった」と意味が近いものはどれですか。', choices: ['ほかのことに変化を与えた', '何も変わらなかった', '前から知っていた', '急に忘れてしまった'], answer: 'ほかのことに変化を与えた', explanation: '影響는 한 일이 다른 일에 미치는 작용입니다.' },
+    { kind: '용법', prompt: '「予報」の使い方として正しいものはどれですか。', choices: ['天気予報によると明日は雨だ。', '予報を一皿食べた。', '駅まで予報に乗った。', '予報を机の下で寝た。'], answer: '天気予報によると明日は雨だ。', explanation: '予報는 앞으로의 날씨 등을 미리 알리는 정보입니다.' },
+  ],
+  'n3-vocab-feelings': [
+    { kind: '유의 표현', prompt: '「迷っている」と意味が近いものはどれですか。', choices: ['どちらにするか決められない', 'すぐに決められる', 'すでに忘れている', '理由をよく知っている'], answer: 'どちらにするか決められない', explanation: '迷う는 선택을 망설이거나 길을 헤맨다는 뜻입니다.' },
+    { kind: '용법', prompt: '「納得」の使い方として正しいものはどれですか。', choices: ['理由を聞いて納得した。', '納得を五枚買った。', '駅まで納得で行った。', '空が納得に晴れた。'], answer: '理由を聞いて納得した。', explanation: '納得する는 설명을 이해하고 받아들이는 것입니다.' },
+  ],
+  'n3-vocab-media': [
+    { kind: '유의 표현', prompt: '「伝える」と意味が近いものはどれですか。', choices: ['相手に知らせる', '自分だけで考える', '場所を移す', '量を減らす'], answer: '相手に知らせる', explanation: '伝える는 내용이나 마음을 다른 사람에게 알리는 것입니다.' },
+    { kind: '용법', prompt: '「原因」の使い方として正しいものはどれですか。', choices: ['事故の原因を調べている。', '原因を三時に食べる。', '駅から原因に乗る。', '原因が机で眠る。'], answer: '事故の原因を調べている。', explanation: '原因는 어떤 결과를 일으킨 까닭입니다.' },
+  ],
+  'n3-vocab-amount': [
+    { kind: '유의 표현', prompt: '「減少した」と意味が近いものはどれですか。', choices: ['数が少なくなった', '数が多くなった', '数が同じだった', '数が分からなかった'], answer: '数が少なくなった', explanation: '減少는 수량이 줄어드는 것입니다.' },
+    { kind: '용법', prompt: '「平均」の使い方として正しいものはどれですか。', choices: ['五人の点数の平均を出した。', '平均を二杯飲んだ。', '駅まで平均に乗った。', '平均で手紙を開けた。'], answer: '五人の点数の平均を出した。', explanation: '平均는 여러 수치를 고르게 계산한 값입니다.' },
+  ],
+  'n3-vocab-travel-more': [
+    { kind: '유의 표현', prompt: '「経由して行く」と意味が近いものはどれですか。', choices: ['途中で別の場所を通って行く', '目的地に直接行く', '出発をやめる', '同じ場所に戻る'], answer: '途中で別の場所を通って行く', explanation: '経由는 목적지까지 가는 길에 다른 곳을 거치는 것입니다.' },
+    { kind: '용법', prompt: '「往復」の使い方として正しいものはどれですか。', choices: ['行きと帰りの往復切符を買った。', '往復を昼ご飯に食べた。', '往復が病院で診察した。', '往復を机に書いて眠った。'], answer: '行きと帰りの往復切符を買った。', explanation: '往復는 가는 길과 돌아오는 길을 합친 것입니다.' },
+  ],
+  'n3-vocab-relationships': [
+    { kind: '유의 표현', prompt: '「誤解した」と意味が近いものはどれですか。', choices: ['意味を間違えて受け取った', '正しく理解した', 'すぐに賛成した', '何度も説明した'], answer: '意味を間違えて受け取った', explanation: '誤解する는 뜻이나 상황을 잘못 이해하는 것입니다.' },
+    { kind: '용법', prompt: '「尊敬」の使い方として正しいものはどれですか。', choices: ['努力を続ける先生を尊敬している。', '駅まで尊敬に乗って行った。', '尊敬を冷蔵庫で冷やした。', '空が尊敬に晴れた。'], answer: '努力を続ける先生を尊敬している。', explanation: '尊敬する는 상대의 인품이나 행동을 높이 평가하는 것입니다.' },
+  ],
+  'n3-vocab-action': [
+    { kind: '유의 표현', prompt: '「防ぐ」と意味が近いものはどれですか。', choices: ['起こらないようにする', 'もっと増やす', '後で報告する', '相手に知らせる'], answer: '起こらないようにする', explanation: '防ぐ는 좋지 않은 일이 일어나지 않도록 막는 것입니다.' },
+    { kind: '용법', prompt: '「認める」の使い方として正しいものはどれですか。', choices: ['自分の間違いを認めた。', '認めるを一杯飲んだ。', '駅まで認めるに乗った。', '空が認めるを降らせた。'], answer: '自分の間違いを認めた。', explanation: '認める는 사실이나 잘못을 받아들이는 뜻으로 씁니다.' },
+  ],
+};
+
+export const n3VocabularyUnits: readonly N3Unit[] = baseVocabularyUnits.map((unit) => ({
+  ...unit,
+  questions: reviewQuestions[unit.id],
+}));
