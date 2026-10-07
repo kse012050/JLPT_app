@@ -29,10 +29,11 @@ function questionsFor(unit: N3Unit): ChoiceQuestion[] {
       const first: ChoiceQuestion = index % 2 === 0
         ? { kind: '한자 읽기', prompt: `「${word.word}」의 읽기는 무엇인가요?`, choices: options('reading'), answer: word.reading, explanation }
         : { kind: '표기', prompt: `「${word.reading}」에 해당하는 말은 무엇인가요?`, choices: options('word'), answer: word.word, explanation };
-      const second: ChoiceQuestion = index % 2 === 0 && word.example.includes(word.word)
-        ? { kind: '문맥', prompt: `${word.example.replace(word.word, '（　）')}\n빈칸에 들어갈 말은 무엇인가요?`, choices: options('word'), answer: word.word, explanation }
-        : { kind: '뜻', prompt: `「${word.word}」의 뜻은 무엇인가요?`, choices: options('meaning'), answer: word.meaning, explanation };
-      return [first, second];
+      const meaning: ChoiceQuestion = { kind: '뜻', prompt: `「${word.word}」의 뜻은 무엇인가요?`, choices: options('meaning'), answer: word.meaning, explanation };
+      const context: ChoiceQuestion[] = word.example.includes(word.word)
+        ? [{ kind: '문맥', prompt: `${word.example.replace(word.word, '（　）')}\n빈칸에 들어갈 말은 무엇인가요?`, choices: options('word'), answer: word.word, explanation }]
+        : [];
+      return [first, meaning, ...context];
     }),
     ...(unit.questions ?? []),
   ];

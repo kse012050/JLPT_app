@@ -175,7 +175,22 @@ const reviewQuestions: Record<string, readonly ChoiceQuestion[]> = {
   ],
 };
 
+const contextQuestions: Record<string, ChoiceQuestion> = {
+  'n3-vocab-school': { kind: '문맥 어휘', prompt: '明日は（　）があるので、教科書を持っていきます。', choices: ['授業', '家賃', '台風', '道路'], answer: '授業', explanation: '교과서를 가져가는 이유로 수업이 자연스럽습니다.' },
+  'n3-vocab-health': { kind: '문맥 어휘', prompt: '熱やせきの（　）が続いています。', choices: ['症状', '料金', '住所', '予定'], answer: '症状', explanation: '열과 기침은 몸에 나타나는 증상입니다.' },
+  'n3-vocab-home': { kind: '문맥 어휘', prompt: '来月、駅の近くに（　）します。', choices: ['引っ越し', '発音', '予報', '消費'], answer: '引っ越し', explanation: '사는 곳을 옮기는 상황이므로 引っ越し가 맞습니다.' },
+  'n3-vocab-office': { kind: '문맥 어휘', prompt: 'この仕事は私が（　）します。', choices: ['担当', '収穫', '診察', '観光'], answer: '担当', explanation: '업무를 맡는다는 뜻의 担当를 씁니다.' },
+  'n3-vocab-public': { kind: '문맥 어휘', prompt: 'この（　）は午後九時まで利用できます。', choices: ['施設', '感情', '農業', '天候'], answer: '施設', explanation: '이용 시간이 정해진 공공시설을 뜻합니다.' },
+  'n3-vocab-weather': { kind: '문맥 어휘', prompt: '天気（　）によると、明日は雨です。', choices: ['予報', '会話', '家賃', '授業'], answer: '予報', explanation: '앞으로의 날씨를 알리는 정보는 天気予報입니다.' },
+  'n3-vocab-feelings': { kind: '문맥 어휘', prompt: '面接の前なので、少し（　）しています。', choices: ['緊張', '配達', '発見', '節約'], answer: '緊張', explanation: '면접 전의 긴장된 마음을 나타냅니다.' },
+  'n3-vocab-media': { kind: '문맥 어휘', prompt: '今朝、新聞でその（　）を読みました。', choices: ['記事', '授業', '交通', '気温'], answer: '記事', explanation: '신문에서 읽는 것은 기사입니다.' },
+  'n3-vocab-amount': { kind: '문맥 어휘', prompt: '合格した人の（　）は去年より高くなりました。', choices: ['割合', '住所', '風景', '性格'], answer: '割合', explanation: '합격한 사람의 비율을 비교하는 문장입니다.' },
+  'n3-vocab-travel-more': { kind: '문맥 어휘', prompt: 'バスに乗る前に（　）を確認しました。', choices: ['目的地', '失敗', '感情', '環境'], answer: '目的地', explanation: '버스를 타기 전 도착할 곳을 확인합니다.' },
+  'n3-vocab-relationships': { kind: '문맥 어휘', prompt: '地域の人たちと（　）する機会がありました。', choices: ['交流', '故障', '出発', '集計'], answer: '交流', explanation: '사람들과 사귀고 관계를 맺는 뜻입니다.' },
+  'n3-vocab-action': { kind: '문맥 어휘', prompt: '二つの案から一つを（　）。', choices: ['選ぶ', '沈む', '怒る', '眠る'], answer: '選ぶ', explanation: '여러 안 중에서 하나를 고르는 문장입니다.' },
+};
+
 export const n3VocabularyUnits: readonly N3Unit[] = baseVocabularyUnits.map((unit) => ({
   ...unit,
-  questions: reviewQuestions[unit.id],
+  questions: [...reviewQuestions[unit.id], contextQuestions[unit.id]],
 }));

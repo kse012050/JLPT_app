@@ -199,7 +199,21 @@ const originalN3Units: readonly N3Unit[] = [
     ] },
 ];
 
-export const n3Units: readonly N3Unit[] = [...originalN3Units, ...n3VocabularyUnits];
+const originalVocabularyContext: Record<string, ChoiceQuestion> = {
+  'n3-vocab-work': { kind: '문맥 어휘', prompt: '明日の会議の（　）を確認しました。', choices: ['予定', '景色', '症状', '家賃'], answer: '予定', explanation: '회의의 일정이나 계획을 확인하는 문장입니다.' },
+  'n3-vocab-travel': { kind: '문맥 어휘', prompt: '旅行の前にホテルを（　）しました。', choices: ['予約', '故障', '輸出', '反対'], answer: '予約', explanation: '여행 전에 숙소를 미리 확보합니다.' },
+  'n3-vocab-shopping': { kind: '문맥 어휘', prompt: 'エアコンが（　）したので、修理を頼みました。', choices: ['故障', '卒業', '到着', '交流'], answer: '故障', explanation: '수리를 요청한 원인은 에어컨 고장입니다.' },
+  'n3-vocab-people': { kind: '문맥 어휘', prompt: '試験の結果が（　）です。', choices: ['心配', '往復', '配達', '観光'], answer: '心配', explanation: '시험 결과를 걱정하는 마음을 나타냅니다.' },
+  'n3-vocab-society': { kind: '문맥 어휘', prompt: 'みんなで地球の（　）を守りましょう。', choices: ['環境', '家賃', '申請', '階段'], answer: '環境', explanation: '지구의 환경을 지키는 문장입니다.' },
+  'n3-vocab-describe': { kind: '문맥 어휘', prompt: '説明を聞いて、内容を（　）理解しました。', choices: ['十分', '途中', '年齢', '失敗'], answer: '十分', explanation: '설명을 듣고 내용을 충분히 이해했다는 뜻입니다.' },
+};
+
+export const n3Units: readonly N3Unit[] = [
+  ...originalN3Units.map((unit) => unit.area === 'vocabulary'
+    ? { ...unit, questions: [originalVocabularyContext[unit.id]] }
+    : unit),
+  ...n3VocabularyUnits,
+];
 
 export const n3Areas: readonly { id: N3Area; title: string; description: string }[] = [
   { id: 'vocabulary', title: '문자·어휘', description: '한자 읽기, 문맥과 어휘' },

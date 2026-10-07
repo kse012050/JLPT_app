@@ -7,6 +7,7 @@ import { InteractiveJapaneseWord } from '@/components/InteractiveJapaneseWord';
 import { formatKoreanMeanings } from '@/content/korean-meaning';
 import source from '@/content/openjlpt-n3-reference.json';
 import korean from '@/content/openjlpt-reference-ko.json';
+import reviewed from '@/content/reviewed-vocabulary-ko.json';
 import { getReferenceProgress, saveReferenceProgress } from '@/storage/reference-progress';
 
 type Level = 'N3' | 'N4' | 'N5';
@@ -20,6 +21,7 @@ const reference = source as unknown as { levels: Record<Level, { vocabulary: Wor
 type KoWord = { meanings: string[]; examples: string[] };
 type KoGrammar = { meaning: string; formation: string; notes: string; examples: string[] };
 const translated = korean as unknown as { levels: Record<Level, { vocabulary: Record<string, KoWord>; grammar: Record<string, KoGrammar> }> };
+const reviewedExamples = reviewed.examples as Record<string, Record<string, string>>;
 const pageSize = 16;
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', greenPale: '#E5F8EF', line: '#ECE9F0' };
 const fonts = { body: 'NotoSansKR_400Regular', medium: 'NotoSansKR_500Medium', semi: 'NotoSansKR_600SemiBold', bold: 'NotoSansKR_700Bold', jp: 'NotoSansJP_400Regular', jpBold: 'NotoSansJP_700Bold', number: 'PlusJakartaSans_700Bold' };
@@ -68,7 +70,7 @@ export default function N3ReferenceScreen() {
   }
 
   const header = <View style={s.content}>
-    <View style={s.hero}><Text style={s.eyebrow}>N3 합격 대비 · 공개 참고 자료</Text><Text style={s.heroTitle}>어휘·문법 확장 학습</Text><Text style={s.heroText}>N3 어휘 1,659개와 문법 101개, 선행 단계 N4·N5까지 탐색할 수 있습니다. 뜻과 예문 번역, 설명은 한국어로 표시합니다.</Text><Text style={s.heroNote}>공개 자료를 자동 번역한 부분은 감수가 필요합니다. 이 목록은 공식 시험 범위가 아닙니다.</Text></View>
+    <View style={s.hero}><Text style={s.eyebrow}>N3 합격 대비 · 공개 참고 자료</Text><Text style={s.heroTitle}>어휘·문법 확장 학습</Text><Text style={s.heroText}>N3 어휘 1,659개와 문법 101개, 선행 단계 N4·N5까지 탐색할 수 있습니다. 어휘 뜻은 한국어 검수를 반영했습니다.</Text><Text style={s.heroNote}>검수하지 않은 어휘 예문 번역은 표시하지 않습니다. 문법의 자동 번역은 감수가 필요합니다. 이 목록은 공식 시험 범위가 아닙니다.</Text></View>
     <View style={s.segmentRow}>{(['N3', 'N4', 'N5'] as const).map((item) => <Pressable key={item} onPress={() => chooseLevel(item)} style={[s.segment, level === item && s.segmentActive]} accessibilityRole="button"><Text style={[s.segmentText, level === item && s.segmentTextActive]}>{item}</Text></Pressable>)}</View>
     <View style={s.segmentRow}>{([['vocabulary', '어휘'], ['grammar', '문법']] as const).map(([item, label]) => <Pressable key={item} onPress={() => chooseKind(item)} style={[s.segment, kind === item && s.segmentActive]} accessibilityRole="button"><Text style={[s.segmentText, kind === item && s.segmentTextActive]}>{label} {reference.levels[level][item].length}</Text></Pressable>)}</View>
     <TextInput value={query} onChangeText={(value) => { setQuery(value); setPage(0); setExpanded(null); }} placeholder={kind === 'vocabulary' ? '일본어·읽기·한국어 뜻 검색' : '문법 표현·한국어 뜻 검색'} placeholderTextColor={colors.muted} style={s.search} autoCorrect={false} accessibilityLabel="참고 자료 검색" />
@@ -82,6 +84,7 @@ export default function N3ReferenceScreen() {
     const isStudied = studiedSet.has(key);
     const wordKo = kind === 'vocabulary' ? translated.levels[level].vocabulary[item.id] : null;
     const grammarKo = kind === 'grammar' ? translated.levels[level].grammar[item.id] : null;
+    const wordReviewKey = kind === 'vocabulary' ? `${level}:${(item as Word).word}:${(item as Word).reading}` : '';
     return <View style={s.card}>
       {kind === 'vocabulary'
         ? <><InteractiveJapaneseWord word={(item as Word).word} reading={(item as Word).reading} /><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{wordKo ? formatKoreanMeanings(wordKo.meanings) : ''}</Text><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Word).word} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandButton}><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>
@@ -89,7 +92,7 @@ export default function N3ReferenceScreen() {
       {isExpanded ? <View style={s.detail}>
         {kind === 'grammar' && grammarKo ? <><Text style={s.detailLabel}>접속 형태</Text><Text style={s.detailText}>{grammarKo.formation}</Text>{grammarKo.notes ? <><Text style={s.detailLabel}>설명</Text><Text style={s.detailText}>{grammarKo.notes}</Text></> : null}</> : null}
         <Text style={s.detailLabel}>예문</Text>
-        {item.examples.length ? item.examples.map((example, index) => <View key={`${key}-${index}`} style={s.example}><Text style={s.japanese}>{example.ja}</Text>{example.furigana ? <Text style={s.furigana}>{readingHint(example.furigana)}</Text> : null}<Text style={s.exampleEnglish}>{wordKo?.examples[index] ?? grammarKo?.examples[index]}</Text>{example.tatoeba_id ? <Link href={`https://tatoeba.org/sentences/show/${example.tatoeba_id}`} target="_blank" style={s.exampleSource}>Tatoeba 예문 출처 ↗</Link> : null}</View>) : <Text style={s.detailText}>원자료에 예문이 없습니다.</Text>}
+        {item.examples.length ? item.examples.map((example, index) => <View key={`${key}-${index}`} style={s.example}><Text style={s.japanese}>{example.ja}</Text>{example.furigana ? <Text style={s.furigana}>{readingHint(example.furigana)}</Text> : null}{(kind === 'grammar' || reviewedExamples[wordReviewKey]?.[index] !== undefined) ? <Text style={s.exampleEnglish}>{wordKo?.examples[index] ?? grammarKo?.examples[index]}</Text> : null}{example.tatoeba_id ? <Link href={`https://tatoeba.org/sentences/show/${example.tatoeba_id}`} target="_blank" style={s.exampleSource}>Tatoeba 예문 출처 ↗</Link> : null}</View>) : <Text style={s.detailText}>원자료에 예문이 없습니다.</Text>}
       </View> : null}
       <Pressable onPress={() => toggleStudied(key)} disabled={!loaded} style={[s.studiedButton, isStudied && s.studiedButtonActive]} accessibilityRole="button" accessibilityLabel={isStudied ? '학습 표시 해제' : '학습함으로 표시'}><Text style={[s.studiedText, isStudied && s.studiedTextActive]}>{isStudied ? '✓ 학습함' : '학습함으로 표시'}</Text></Pressable>
     </View>;

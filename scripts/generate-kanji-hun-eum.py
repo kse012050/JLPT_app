@@ -38,8 +38,10 @@ def read_hanja(path, wanted):
         parts = line.split(":", 2)
         if len(parts) != 3 or len(parts[1]) != 1 or parts[1] not in wanted:
             continue
-        if parts[2].strip():
-            dictionary.setdefault(parts[1], parts[2].split(",", 1)[0].strip())
+        meanings = [meaning.strip() for meaning in parts[2].split(",") if meaning.strip()]
+        if meanings:
+            collected = dictionary.setdefault(parts[1], [])
+            collected.extend(meaning for meaning in meanings if meaning not in collected)
     return dictionary
 
 
@@ -74,7 +76,11 @@ def main():
         if not meaning and character in JAPANESE_FORMS:
             meaning = dictionary.get(JAPANESE_FORMS[character])
         if meaning:
-            result[character] = meaning
+            # The source can list several sounds on separate lines and several
+            # meanings on each line. Keep every distinct hun-eum in the popup.
+            if character == "行" and "다닐 행" in meaning:
+                meaning = ["다닐 행", *(item for item in meaning if item != "다닐 행")]
+            result[character] = ", ".join(meaning)
 
     OUTPUT.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     missing = sorted(wanted - result.keys())

@@ -18,7 +18,9 @@ const { n3Units, n3Areas } = loadTsModule(path.join(__dirname, '../src/content/n
 const kanjiReference = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/n3-kanji-reference.json'), 'utf8'));
 const openReference = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/openjlpt-n3-reference.json'), 'utf8'));
 const koreanReference = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/openjlpt-reference-ko.json'), 'utf8'));
+const reviewedVocabulary = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/reviewed-vocabulary-ko.json'), 'utf8'));
 const { bankByLevel, bankCounts } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-bank.ts'));
+const { formatKoreanMeanings } = loadTsModule(path.join(__dirname, '../src/content/korean-meaning.ts'));
 const { questionsForBatch, batchCount } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-quiz.ts'));
 
 const errors = [];
@@ -35,10 +37,15 @@ for (const level of ['N5', 'N4', 'N3']) {
     if (word.examples.some((example) => !example.ko)) errors.push(`한국어 어휘 예문 누락: ${word.id}`);
   }
   for (let batch = 0; batch < batchCount(level); batch++) {
-    const questions = questionsForBatch(level, batch);
-    if (questions.length !== Math.min(20, bankByLevel[level].length - batch * 20)) errors.push(`문제 수 오류: ${level}/${batch}`);
-    for (const question of questions) {
-      if (question.choices.length !== 4 || new Set(question.choices).size !== 4 || !question.choices.includes(question.answer)) errors.push(`보기 오류: ${level}/${batch}/${question.word.id}`);
+    const batchWords = bankByLevel[level].slice(batch * 20, (batch + 1) * 20);
+    for (const mode of ['meaning', 'reading', 'orthography']) {
+      const questions = questionsForBatch(level, batch, mode);
+      const expected = mode === 'meaning' ? batchWords.length : batchWords.filter((word) => /[\u3400-\u9fff]/u.test(word.word)).length;
+      if (questions.length !== expected) errors.push(`문제 수 오류: ${level}/${batch}/${mode}`);
+      for (const question of questions) {
+        if (question.choices.length !== 4 || new Set(question.choices).size !== 4 || !question.choices.includes(question.answer)) errors.push(`보기 오류: ${level}/${batch}/${mode}/${question.word.id}`);
+        if (!question.prompt || question.mode !== mode) errors.push(`문제 문구 오류: ${level}/${batch}/${mode}/${question.word.id}`);
+      }
     }
   }
 }
@@ -76,6 +83,7 @@ for (const [level, expectedVocabulary, expectedGrammar] of [['N5', 674, 81], ['N
       if (!entry.id || entryIds.has(entry.id)) errors.push(`${level}/${kind}: 중복 또는 빈 ID ${entry.id}`);
       entryIds.add(entry.id);
       if (kind === 'vocabulary' && (!entry.word || !entry.reading || !entry.meanings?.length)) errors.push(`${level}/${kind}/${entry.id}: 어휘 내용 누락`);
+      if (kind === 'vocabulary' && !/^[\u3040-\u309f\u30a0-\u30ffー・]+$/u.test(entry.reading)) errors.push(`${level}/${kind}/${entry.id}: 읽기 표기 형식 오류`);
       if (kind === 'grammar' && (!entry.pattern || !entry.meaning || !entry.formation)) errors.push(`${level}/${kind}/${entry.id}: 문법 내용 누락`);
       if (level === 'N3' && kind === 'grammar' && !entry.meaningKo) errors.push(`${level}/${kind}/${entry.id}: 한국어 간단 뜻 누락`);
       if (!Array.isArray(entry.examples)) errors.push(`${level}/${kind}/${entry.id}: 예문 형식 오류`);
@@ -84,6 +92,27 @@ for (const [level, expectedVocabulary, expectedGrammar] of [['N5', 674, 81], ['N
       }
     }
   }
+}
+
+const reviewedKeys = new Set();
+for (const level of ['N5', 'N4', 'N3']) {
+  for (const entry of openReference.levels[level].vocabulary) {
+    const key = `${level}:${entry.word}:${entry.reading}`;
+    if (!(key in reviewedVocabulary.meanings)) continue;
+    reviewedKeys.add(key);
+    const expected = formatKoreanMeanings(reviewedVocabulary.meanings[key]);
+    const bankWord = bankByLevel[level].find((word) => word.id === `${level}-${entry.id}`);
+    const actual = bankWord?.meaningKo;
+    if (actual !== expected) errors.push(`${key}: 검수한 여러 뜻이 학습 화면에 모두 표시되지 않습니다.`);
+    for (const [index, example] of (bankWord?.examples ?? []).entries()) {
+      if (example.reviewed !== (reviewedVocabulary.examples[key]?.[index] !== undefined)) errors.push(`${key}/${index}: 예문 검수 표시 오류`);
+    }
+  }
+}
+if (reviewedKeys.size !== Object.keys(reviewedVocabulary.meanings).length) errors.push('검수 어휘 키 누락');
+if (reviewedKeys.size !== 2963) errors.push(`원본 어휘 뜻 검수 누락: ${reviewedKeys.size}/2963`);
+for (const [word, expected] of [['合う', '맞다'], ['池', '연못'], ['うがい', '가글'], ['小麦', '밀']]) {
+  if (!Object.values(bankByLevel).flat().some((entry) => entry.word === word && entry.meaningKo?.includes(expected))) errors.push(`${word}: 교정한 뜻이 학습 자료에 반영되지 않았습니다.`);
 }
 
 function checkQuestion(question, where) {
@@ -127,7 +156,7 @@ for (const unit of n3Units) {
 }
 
 if (n3Units.length !== 33) errors.push(`단원 수 오류: ${n3Units.length}/33`);
-if (vocabularyReviewQuestions !== 24) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/24`);
+if (vocabularyReviewQuestions !== 42) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/42`);
 for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 12, reading: 12, listening: 12 })) {
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
@@ -136,5 +165,5 @@ if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 전체 한국어 뜻·예문 번역, 모든 묶음의 문제 보기 정상; 한국어 단원 ${n3Units.length}개, 문법 ${counts.grammar}개, 독해 ${counts.reading}문항, 청해 ${counts.listening}문항`);
+  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${counts.grammar}개, 독해 ${counts.reading}문항, 청해 ${counts.listening}문항`);
 }

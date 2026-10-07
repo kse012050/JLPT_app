@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/content/openjlpt-n3-reference.json"
 TRANSLATIONS = ROOT / "src/content/openjlpt-reference-ko.json"
+ENTRY_CORRECTIONS = ROOT / "src/content/reviewed-vocabulary-ko.json"
 
 # Keys are OpenJLPT entry IDs, so homographs and different readings stay separate.
 CORRECTIONS = {
@@ -66,7 +67,10 @@ CORRECTIONS = {
 def main():
     source = json.loads(SOURCE.read_text(encoding="utf-8"))
     data = json.loads(TRANSLATIONS.read_text(encoding="utf-8"))
+    reviewed = json.loads(ENTRY_CORRECTIONS.read_text(encoding="utf-8"))
     found = set()
+    reviewed_meanings = set()
+    reviewed_examples = set()
     deduplicated = 0
     for level, content in source["levels"].items():
         for entry in content["vocabulary"]:
@@ -75,6 +79,17 @@ def main():
             if entry_id in CORRECTIONS:
                 target["meanings"] = CORRECTIONS[entry_id]
                 found.add(entry_id)
+            key = f"{level}:{entry['word']}:{entry['reading']}"
+            if key in reviewed["meanings"]:
+                target["meanings"] = reviewed["meanings"][key]
+                reviewed_meanings.add(key)
+            if key in reviewed["examples"]:
+                for index, translation in reviewed["examples"][key].items():
+                    index = int(index)
+                    if index >= len(target["examples"]):
+                        raise ValueError(f"Invalid example index: {key}/{index}")
+                    target["examples"][index] = translation
+                reviewed_examples.add(key)
             before = target["meanings"]
             after = list(dict.fromkeys(meaning.strip() for meaning in before if meaning.strip()))
             if len(after) < len(before):
@@ -82,8 +97,10 @@ def main():
             target["meanings"] = after
     if found != CORRECTIONS.keys():
         raise ValueError(f"Missing OpenJLPT entries: {CORRECTIONS.keys() - found}")
+    if reviewed_meanings != reviewed["meanings"].keys() or reviewed_examples != reviewed["examples"].keys():
+        raise ValueError("Missing reviewed vocabulary entries")
     TRANSLATIONS.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    print(f"Corrected {len(found)} entries and removed repeated meanings from {deduplicated} entries")
+    print(f"Corrected {len(found) + len(reviewed_meanings)} meanings and {len(reviewed_examples)} example groups; removed repeated meanings from {deduplicated} entries")
 
 
 if __name__ == "__main__":

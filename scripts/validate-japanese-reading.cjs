@@ -22,5 +22,6 @@ for (const [kana, expected] of [
   const actual = kanaToHangul(kana);
   if (actual !== expected) throw new Error(`${kana}: ${actual} (예상: ${expected})`);
 }
-if (kanjiHunEum('会') !== '모일 회') throw new Error('会의 훈음이 다릅니다.');
+if (kanjiHunEum('会') !== '모일 회, 모을 회') throw new Error('会의 여러 훈음이 다릅니다.');
+if (!kanjiHunEum('行')?.includes('다닐 행')) throw new Error('行의 여러 훈음이 누락되었습니다.');
 console.log('가나 발음과 한자 훈음 예시 검증 완료');

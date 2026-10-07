@@ -1,6 +1,6 @@
 import * as Speech from 'expo-speech';
 import { useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isKanji, kanaToHangul, kanjiHunEum } from '@/content/japanese-reading';
@@ -8,7 +8,6 @@ import { isKanji, kanaToHangul, kanjiHunEum } from '@/content/japanese-reading';
 type KanjiPopover = { character: string; x: number; y: number; width: number; height: number };
 
 const popoverWidth = 220;
-const popoverHeight = 82;
 const margin = 12;
 let latestSpeechRequest = 0;
 
@@ -34,6 +33,8 @@ export function InteractiveJapaneseWord({ word, reading }: { word: string; readi
   const characterRefs = useRef<Record<number, View | null>>({});
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const kanjiDescription = popover ? kanjiHunEum(popover.character) ?? '한국식 훈음 자료가 없습니다' : '';
+  const popoverHeight = Math.min(240, Math.max(82, 58 + Math.ceil(kanjiDescription.length / 16) * 22));
 
   function showKanji(character: string, index: number) {
     setReadingOpen(false);
@@ -62,9 +63,9 @@ export function InteractiveJapaneseWord({ word, reading }: { word: string; readi
       <View style={s.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => setPopover(null)} accessibilityRole="button" accessibilityLabel="한자 설명 닫기" />
         <View style={[s.popover, { left, top, width: popoverWidth, height: popoverHeight }]} accessibilityLiveRegion="polite">
-          <View style={s.popoverHeader}><Text style={s.detailLabel}>한자 뜻과 음</Text><Pressable onPress={() => setPopover(null)} style={s.closeButton} accessibilityRole="button" accessibilityLabel="한자 말풍선 닫기"><Text style={s.closeText}>×</Text></Pressable></View>
-          <Text style={s.detailText}>{popover.character} · {kanjiHunEum(popover.character) ?? '한국식 훈음 자료가 없습니다'}</Text>
-          <View style={[above ? s.arrowDown : s.arrowUp, { left: arrowLeft }]} />
+          <View style={s.popoverHeader}><Text style={s.detailLabel}>한국식 한자 훈음</Text><Pressable onPress={() => setPopover(null)} style={s.closeButton} accessibilityRole="button" accessibilityLabel="한자 말풍선 닫기"><Text style={s.closeText}>×</Text></Pressable></View>
+          <ScrollView style={s.popoverScroll} nestedScrollEnabled><Text style={s.detailText}>{popover.character} · {kanjiDescription}</Text></ScrollView>
+          <View style={[above ? s.arrowDown : s.arrowUp, above ? { top: popoverHeight - 1 } : null, { left: arrowLeft }]} />
         </View>
       </View>
     </Modal> : null}
@@ -86,8 +87,9 @@ const s = StyleSheet.create({
   overlay: { flex: 1 },
   popover: { position: 'absolute', backgroundColor: '#FFF0F4', borderColor: '#F4C6D3', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingTop: 8, elevation: 7, shadowColor: '#201F24', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   popoverHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  popoverScroll: { flex: 1 },
   closeButton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   closeText: { color: '#797681', fontSize: 22, lineHeight: 25 },
-  arrowDown: { position: 'absolute', top: popoverHeight - 1, width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#FFF0F4' },
+  arrowDown: { position: 'absolute', width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#FFF0F4' },
   arrowUp: { position: 'absolute', top: -8, width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderBottomWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: '#FFF0F4' },
 });

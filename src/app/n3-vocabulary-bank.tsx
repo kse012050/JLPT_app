@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { InteractiveJapaneseWord } from '@/components/InteractiveJapaneseWord';
 import { bankByLevel, bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
-import { batchCount, questionsForBatch, resultKey, wordsForBatch } from '@/content/n3-vocabulary-quiz';
+import { batchCount, questionsForBatch, resultKey, wordsForBatch, type QuizMode } from '@/content/n3-vocabulary-quiz';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
 
 type Stage = 'learn' | 'quiz' | 'result';
@@ -13,6 +13,11 @@ const levels: BankLevel[] = ['N3', 'N4', 'N5'];
 const pink = '#E82E5A';
 const ink = '#201F24';
 const muted = '#797681';
+const quizModes: { id: QuizMode; label: string }[] = [
+  { id: 'meaning', label: '뜻' },
+  { id: 'reading', label: '한자 읽기' },
+  { id: 'orthography', label: '표기' },
+];
 
 export default function N3VocabularyBankScreen() {
   const params = useLocalSearchParams<{ level?: string; batch?: string }>();
@@ -22,17 +27,20 @@ export default function N3VocabularyBankScreen() {
   const [level, setLevel] = useState<BankLevel>(initialLevel);
   const [batch, setBatch] = useState(initialBatch);
   const [stage, setStage] = useState<Stage>('learn');
+  const [mode, setMode] = useState<QuizMode>('meaning');
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [correct, setCorrect] = useState(0);
   const [results, setResults] = useState<N3Results>({});
   const [saveError, setSaveError] = useState(false);
   const words = useMemo(() => wordsForBatch(level, batch), [level, batch]);
-  const questions = useMemo(() => questionsForBatch(level, batch), [level, batch]);
+  const questions = useMemo(() => questionsForBatch(level, batch, mode), [level, batch, mode]);
   const question = questions[index];
   const count = batchCount(level);
-  const completed = Array.from({ length: count }, (_, item) => resultKey(level, item)).filter((key) => results[key]).length;
-  const firstIncomplete = Array.from({ length: count }, (_, item) => item).find((item) => !results[resultKey(level, item)]);
+  const completed = Array.from({ length: count }, (_, item) => resultKey(level, item, mode)).filter((key) => results[key]).length;
+  const firstIncomplete = Array.from({ length: count }, (_, item) => item).find((item) =>
+    (mode === 'meaning' || wordsForBatch(level, item).some((word) => /[\u3400-\u9fff]/u.test(word.word)))
+    && !results[resultKey(level, item, mode)]);
 
   useEffect(() => { getN3Results().then(setResults).catch(() => setSaveError(true)); }, []);
 
@@ -42,6 +50,14 @@ export default function N3VocabularyBankScreen() {
     setStage('learn');
     setIndex(0);
     setSelected(null);
+  }
+
+  function chooseMode(next: QuizMode) {
+    setMode(next);
+    setStage('learn');
+    setIndex(0);
+    setSelected(null);
+    setCorrect(0);
   }
 
   function chooseBatch(next: number) {
@@ -60,7 +76,7 @@ export default function N3VocabularyBankScreen() {
     setSelected(null);
     if (index + 1 < questions.length) { setIndex(index + 1); return; }
     setStage('result');
-    try { setResults(await saveN3Result(resultKey(level, batch), nextCorrect, questions.length)); }
+    try { setResults(await saveN3Result(resultKey(level, batch, mode), nextCorrect, questions.length)); }
     catch { setSaveError(true); }
   }
 
@@ -68,25 +84,27 @@ export default function N3VocabularyBankScreen() {
     <View style={s.header}><Pressable onPress={() => stage === 'learn' ? router.back() : setStage('learn')} style={s.back} accessibilityRole="button"><Text style={s.backText}>‹</Text></Pressable><Text style={s.headerTitle}>문자·어휘 전체 학습</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
       <View style={s.content}>
-        <View style={s.hero}><Text style={s.eyebrow}>N3 대비 어휘 자료</Text><Text style={s.heroTitle}>{bankCounts.total.toLocaleString()}개 중복 없는 어휘</Text><Text style={s.body}>N3 {bankCounts.N3.toLocaleString()}개 · 선행 N4·N5 {(bankCounts.N4 + bankCounts.N5).toLocaleString()}개를 20개씩 공부합니다. 표제어와 읽기가 모두 같은 항목은 하나로 합쳤습니다.</Text><Text style={s.note}>뜻과 예문 번역을 한국어로 표시합니다. 공개 자료를 자동 번역한 항목은 표현이 어색할 수 있습니다.</Text></View>
+        <View style={s.hero}><Text style={s.eyebrow}>N3 대비 어휘 자료</Text><Text style={s.heroTitle}>{bankCounts.total.toLocaleString()}개 중복 없는 어휘</Text><Text style={s.body}>N3 {bankCounts.N3.toLocaleString()}개 · 선행 N4·N5 {(bankCounts.N4 + bankCounts.N5).toLocaleString()}개를 20개씩 공부합니다. 표제어와 읽기가 모두 같은 항목은 하나로 합쳤습니다.</Text><Text style={s.note}>어휘 뜻은 전체 항목을 대조·수정했습니다. 한국어 번역을 검수하지 않은 예문은 일본어 원문만 표시합니다.</Text></View>
         <View style={s.levels}>{levels.map((item) => <Pressable key={item} onPress={() => chooseLevel(item)} style={[s.levelButton, level === item && s.levelActive]} accessibilityRole="button"><Text style={[s.levelText, level === item && s.levelTextActive]}>{item} · {bankByLevel[item].length.toLocaleString()}</Text></Pressable>)}</View>
+        <View style={s.levels}>{quizModes.map((item) => <Pressable key={item.id} onPress={() => chooseMode(item.id)} style={[s.levelButton, mode === item.id && s.levelActive]} accessibilityRole="button"><Text style={[s.levelText, mode === item.id && s.levelTextActive]}>{item.label}</Text></Pressable>)}</View>
+        <Pressable onPress={() => router.push({ pathname: '/n3-study', params: { area: 'vocabulary' } })} style={s.jumpButton} accessibilityRole="button"><Text style={s.jumpText}>문맥·유의 표현·용법 문제 풀기 ›</Text></Pressable>
         <View style={s.batchRow}><Pressable onPress={() => chooseBatch(batch - 1)} disabled={batch === 0} style={s.batchButton} accessibilityRole="button"><Text style={s.batchButtonText}>‹ 이전</Text></Pressable><View style={s.batchCenter}><Text style={s.batchTitle}>{batch + 1} / {count} 묶음</Text><Text style={s.batchSub}>완료 {completed}묶음 · {batch * 20 + 1}–{Math.min((batch + 1) * 20, bankByLevel[level].length)}번</Text></View><Pressable onPress={() => chooseBatch(batch + 1)} disabled={batch + 1 >= count} style={s.batchButton} accessibilityRole="button"><Text style={s.batchButtonText}>다음 ›</Text></Pressable></View>
         {firstIncomplete !== undefined && firstIncomplete !== batch ? <Pressable onPress={() => chooseBatch(firstIncomplete)} style={s.jumpButton} accessibilityRole="button"><Text style={s.jumpText}>이어서 학습 · {firstIncomplete + 1}묶음으로 이동</Text></Pressable> : null}
         {stage === 'learn' ? <>
           <Text style={s.sectionTitle}>어휘 살펴보기</Text><Text style={s.note}>읽기를 누르면 일본어 음성이 나오고 한글 발음 표기가 펼쳐집니다. 한자를 누르면 뜻과 음을 볼 수 있습니다. 한글 발음은 학습을 돕는 근사 표기입니다.</Text>
-          {words.map((word, item) => <View key={word.id} style={s.wordCard}><Text style={s.wordIndex}>{batch * 20 + item + 1}</Text><View style={s.wordContent}><InteractiveJapaneseWord word={word.word} reading={word.reading} /><Text style={s.meaning}>{word.meaningKo}</Text>{word.curatedExample ? <Text style={s.example}>{word.curatedExample}{word.curatedTranslation ? `\n${word.curatedTranslation}` : ''}</Text> : word.examples[0] ? <Text style={s.example}>{word.examples[0].ja}{`\n${word.examples[0].ko}`}</Text> : null}</View></View>)}
+          {words.map((word, item) => <View key={word.id} style={s.wordCard}><Text style={s.wordIndex}>{batch * 20 + item + 1}</Text><View style={s.wordContent}><InteractiveJapaneseWord word={word.word} reading={word.reading} /><Text style={s.meaning}>{word.meaningKo}</Text>{word.curatedExample ? <Text style={s.example}>{word.curatedExample}{word.curatedTranslation ? `\n${word.curatedTranslation}` : ''}</Text> : word.examples[0] ? <Text style={s.example}>{word.examples[0].ja}{word.examples[0].reviewed ? `\n${word.examples[0].ko}` : ''}</Text> : null}</View></View>)}
         </> : null}
         {stage === 'quiz' && question ? <>
-          <Text style={s.sectionTitle}>뜻 확인 · {index + 1}/{questions.length}</Text>
-          <View style={s.questionCard}><Text style={s.questionLabel}>한국어 뜻</Text><Text style={s.questionWord}>{question.word.word}</Text><Text style={s.body}>이 단어의 뜻을 고르세요.</Text></View>
+          <Text style={s.sectionTitle}>{quizModes.find((item) => item.id === mode)?.label} 확인 · {index + 1}/{questions.length}</Text>
+          <View style={s.questionCard}><Text style={s.questionLabel}>{mode === 'meaning' ? '한국어 뜻' : mode === 'reading' ? '한자 읽기' : '올바른 표기'}</Text><Text style={s.questionWord}>{question.prompt}</Text><Text style={s.body}>{mode === 'meaning' ? '이 단어의 뜻을 고르세요.' : mode === 'reading' ? `${question.word.meaningKo} · 읽기를 고르세요.` : `${question.word.meaningKo} · 표기를 고르세요.`}</Text></View>
           {question.choices.map((choice) => <Pressable key={choice} onPress={() => setSelected(choice)} disabled={selected !== null} style={[s.choice, selected !== null && choice === question.answer && s.correct, selected === choice && choice !== question.answer && s.wrong]} accessibilityRole="button"><Text style={s.choiceText}>{choice}</Text></Pressable>)}
-          {selected !== null ? <View style={s.feedback}><Text style={s.feedbackTitle}>{selected === question.answer ? '정답입니다' : `정답: ${question.answer}`}</Text><Text style={s.body}>{question.word.word} · {question.word.reading}</Text>{question.word.curatedExample ? <Text style={s.example}>{question.word.curatedExample}{question.word.curatedTranslation ? `\n${question.word.curatedTranslation}` : ''}</Text> : question.word.examples[0] ? <Text style={s.example}>{question.word.examples[0].ja}{`\n${question.word.examples[0].ko}`}</Text> : null}</View> : null}
+          {selected !== null ? <View style={s.feedback}><Text style={s.feedbackTitle}>{selected === question.answer ? '정답입니다' : `정답: ${question.answer}`}</Text><Text style={s.body}>{question.word.word} · {question.word.reading}</Text>{question.word.curatedExample ? <Text style={s.example}>{question.word.curatedExample}{question.word.curatedTranslation ? `\n${question.word.curatedTranslation}` : ''}</Text> : question.word.examples[0] ? <Text style={s.example}>{question.word.examples[0].ja}{question.word.examples[0].reviewed ? `\n${question.word.examples[0].ko}` : ''}</Text> : null}</View> : null}
         </> : null}
         {stage === 'result' ? <View style={s.result}><Text style={s.heroTitle}>학습 완료</Text><Text style={s.score}>{correct} / {questions.length} 정답</Text><Text style={s.body}>최고 점수가 기기에 저장됩니다. 다음 묶음으로 이어서 공부할 수 있습니다.</Text></View> : null}
         {saveError ? <Text style={s.error}>학습 기록을 저장하거나 불러오지 못했습니다.</Text> : null}
       </View>
     </ScrollView>
-    <View style={s.footer}>{stage === 'learn' ? <Pressable onPress={() => { setIndex(0); setCorrect(0); setSelected(null); setStage('quiz'); }} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>20문제 풀기</Text></Pressable> : stage === 'quiz' && selected !== null ? <Pressable onPress={advance} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>{index + 1 === questions.length ? '결과 보기' : '다음 문제'}</Text></Pressable> : stage === 'result' ? <Pressable onPress={() => chooseBatch(batch + 1 < count ? batch + 1 : batch)} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>{batch + 1 < count ? '다음 묶음 학습' : '다시 학습'}</Text></Pressable> : null}</View>
+    <View style={s.footer}>{stage === 'learn' ? <Pressable onPress={() => { setIndex(0); setCorrect(0); setSelected(null); setStage('quiz'); }} disabled={questions.length === 0} style={[s.primary, questions.length === 0 && { opacity: 0.4 }]} accessibilityRole="button"><Text style={s.primaryText}>{questions.length ? `${questions.length}문제 풀기` : '이 묶음에는 한자 어휘가 없습니다'}</Text></Pressable> : stage === 'quiz' && selected !== null ? <Pressable onPress={advance} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>{index + 1 === questions.length ? '결과 보기' : '다음 문제'}</Text></Pressable> : stage === 'result' ? <Pressable onPress={() => chooseBatch(batch + 1 < count ? batch + 1 : batch)} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>{batch + 1 < count ? '다음 묶음 학습' : '다시 학습'}</Text></Pressable> : null}</View>
   </SafeAreaView>;
 }
 
