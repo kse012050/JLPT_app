@@ -6,6 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, Vi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExamCalendarModal } from '@/components/exam-calendar-modal';
+import { KanaChartModal } from '@/components/kana-chart-modal';
 import { registrationStatus } from '@/constants/exam-schedule';
 
 const color = {
@@ -87,7 +88,7 @@ function Header({ wide, days }: { wide: boolean; days: number }) {
   );
 }
 
-function MobileExam({ days, onGuide, onCalendar }: { days: number; onGuide: () => void; onCalendar: () => void }) {
+function MobileExam({ days, onGuide, onCalendar, onKana }: { days: number; onGuide: () => void; onCalendar: () => void; onKana: () => void }) {
   return (
     <Card style={styles.mobileExamCard}>
       <View style={styles.between}><View style={styles.planTag}><Icon name={icons.school} tint="#993850" size={14} /><Text style={styles.planTagText}>초보자도 0부터 시작하는 JLPT 완성 플랜</Text></View><Text style={styles.ddayPlain}>D-{days}</Text></View>
@@ -103,6 +104,7 @@ function MobileExam({ days, onGuide, onCalendar }: { days: number; onGuide: () =
         <View style={styles.dateRow}><Text style={styles.dateText}>접수: 9.1~9.20 / 9.28~10.4  <Text style={styles.dateAccent}>({registrationStatus()})</Text></Text><Text style={styles.dateText}>시험일: 12.6(일)</Text></View>
         <Pressable style={styles.calendarButton} onPress={onCalendar} accessibilityRole="button"><Icon name={icons.calendar} size={15} /><Text style={styles.calendarButtonText}>전체 시험 & 학습 달력 보기</Text><Icon name={icons.arrow} size={14} /></Pressable>
       </View>
+      <Pressable style={styles.kanaBanner} onPress={onKana} accessibilityRole="button" accessibilityLabel="히라가나 가타카나 50음도 발음표 보기"><Icon name={icons.translate} tint={color.coral} size={17} /><Text style={styles.kanaBannerText}>히라가나·가타카나 50음도 발음표 보기</Text><Text style={styles.kanaBannerEnd}>팝업 ›</Text></Pressable>
       <View style={styles.recommendation}><Icon name={icons.checkCircle} tint="#50644B" size={16} /><Text style={styles.recommendationText}><Text style={styles.recommendationLead}>오늘의 권장 학습량:</Text> 2개 수업 + 복습 15문항을 완료하면 합격 안정권에 도달합니다.</Text></View>
     </Card>
   );
@@ -119,8 +121,8 @@ function GuideCard() {
   return <Card><SectionTitle title="초보자 1분 시험 가이드" detail="N3 기준 총 180점" /><Text style={styles.cardIntro}>과락 기준을 피하고 시간 배분을 익혀 보세요. 각 영역의 특징을 한눈에 확인할 수 있습니다.</Text><View style={styles.guideGrid}>{guideItems.map(item => <View key={item.title} style={styles.guideTile}><View style={styles.guideTileTop}><View style={[styles.tinyDot, { backgroundColor: item.tint }]} /><Text style={styles.guideTileTitle}>{item.title}</Text></View><Text style={styles.guideTime}>{item.time}</Text><Text style={styles.guideTileDetail}>{item.detail}</Text></View>)}</View></Card>;
 }
 
-function CalendarCard({ days }: { days: number }) {
-  return <Card><SectionTitle title="2026 제2회 시험 일정" detail={`D-${days}`} /><View style={styles.calendarInfo}><View style={styles.between}><Text style={styles.mutedSmall}>일반접수</Text><Text style={styles.calendarValue}>9.1(화) ~ 9.20(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>추가접수</Text><Text style={styles.calendarValue}>9.28(월) ~ 10.4(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>제2회 본시험일</Text><Text style={styles.calendarValue}>12월 6일 (일)</Text></View></View><Text style={styles.mutedSmall}>수험표 출력: 10.26(월)부터 · 서울 실시위원회 기준</Text></Card>;
+function CalendarCard({ days, onKana }: { days: number; onKana: () => void }) {
+  return <Card><SectionTitle title="2026 제2회 시험 일정" detail={`D-${days}`} /><View style={styles.calendarInfo}><View style={styles.between}><Text style={styles.mutedSmall}>일반접수</Text><Text style={styles.calendarValue}>9.1(화) ~ 9.20(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>추가접수</Text><Text style={styles.calendarValue}>9.28(월) ~ 10.4(일)</Text></View><View style={styles.hairline} /><View style={styles.between}><Text style={styles.mutedSmall}>제2회 본시험일</Text><Text style={styles.calendarValue}>12월 6일 (일)</Text></View></View><Text style={styles.mutedSmall}>수험표 출력: 10.26(월)부터 · 서울 실시위원회 기준</Text><Pressable style={styles.kanaBanner} onPress={onKana} accessibilityRole="button" accessibilityLabel="히라가나 가타카나 50음도 발음표 보기"><Icon name={icons.translate} tint={color.coral} size={17} /><Text style={styles.kanaBannerText}>히라가나·가타카나 50음도 발음표 보기</Text><Text style={styles.kanaBannerEnd}>팝업 ›</Text></Pressable></Card>;
 }
 
 function Progress({ percent, coral = false, neutral = false, mobile = false }: { percent: number; coral?: boolean; neutral?: boolean; mobile?: boolean }) {
@@ -239,10 +241,10 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const wide = width >= 700;
   const days = daysToExam();
-  const [modal, setModal] = useState<'guide' | 'calendar' | null>(null);
+  const [modal, setModal] = useState<'guide' | 'calendar' | 'kana' | null>(null);
   const [calendarSession, setCalendarSession] = useState(0);
 
-  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => { setCalendarSession(value => value + 1); setModal('calendar'); }} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><GuideModal visible={modal === 'guide'} onClose={() => setModal(null)} /><ExamCalendarModal key={calendarSession} visible={modal === 'calendar'} onClose={() => setModal(null)} days={days} /></SafeAreaView>;
+  return <SafeAreaView style={styles.safe} edges={['top']}><ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]} showsVerticalScrollIndicator={false}><Header wide={wide} days={days} />{wide ? <View style={styles.columns}><View style={styles.leftColumn}><GuideCard /><CalendarCard days={days} onKana={() => setModal('kana')} /><RoadmapCard wide /></View><View style={styles.rightColumn}><LessonCard wide /><ReviewCard wide /><DoctorCard /></View></View> : <View style={styles.mobileColumn}><MobileExam days={days} onGuide={() => setModal('guide')} onCalendar={() => { setCalendarSession(value => value + 1); setModal('calendar'); }} onKana={() => setModal('kana')} /><LessonCard wide={false} /><ReviewCard wide={false} /><RoadmapCard wide={false} /></View>}</ScrollView><GuideModal visible={modal === 'guide'} onClose={() => setModal(null)} /><ExamCalendarModal key={calendarSession} visible={modal === 'calendar'} onClose={() => setModal(null)} days={days} /><KanaChartModal visible={modal === 'kana'} onClose={() => setModal(null)} /></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
@@ -301,6 +303,9 @@ const styles = StyleSheet.create({
   dateText: { color: '#554245', fontSize: 12, fontFamily: font.body },
   dateAccent: { color: color.coral, fontFamily: font.bold },
   calendarButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: color.surface, borderColor: '#E7D9DA', borderWidth: 1, borderRadius: 8, minHeight: 38 },
+  kanaBanner: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFF9F9', borderColor: '#E7D9DA', borderWidth: 1, borderRadius: 9, minHeight: 41, paddingHorizontal: 10, marginTop: 9 },
+  kanaBannerText: { flex: 1, color: color.ink, fontSize: 11, fontFamily: font.semibold },
+  kanaBannerEnd: { color: color.coral, fontSize: 10, fontFamily: font.bold },
   calendarButtonText: { color: '#1A1C1A', fontSize: 12, fontFamily: font.semibold },
   recommendation: { flexDirection: 'row', gap: 8, borderTopWidth: 1, borderTopColor: '#E7D9DA', paddingTop: 10, marginTop: 12 },
   recommendationText: { color: '#554245', fontSize: 12, lineHeight: 19, fontFamily: font.body, flex: 1 },
