@@ -69,6 +69,8 @@ export const n3GrammarEntries: readonly GrammarEntry[] = source.map((entry, inde
   };
   return {
     pattern: grammarPatternKo(entry.pattern),
+    focus: ko.focus,
+    furigana: entry.examples[0].furigana,
     meaning,
     formation: grammarFormationKo(entry.formation),
     explanation: ko.explanation,

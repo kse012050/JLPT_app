@@ -21,6 +21,8 @@ export type VocabularyEntry = {
 
 export type GrammarEntry = {
   pattern: string;
+  focus?: string;
+  furigana?: string;
   meaning: string;
   formation?: string;
   explanation: string;

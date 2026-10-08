@@ -5,6 +5,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeaderBackButton } from '@/components/header-back-button';
+import { GrammarExpression, SpokenGrammarExample } from '@/components/GrammarExpression';
+import { grammarFocus } from '@/content/grammar-display';
 import { n3Areas, unitsForArea, type ChoiceQuestion, type N3Area, type N3Unit } from '@/content/n3';
 import kanjiReference from '@/content/n3-kanji-reference.json';
 import { bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
@@ -139,13 +141,13 @@ export default function N3StudyScreen() {
           <View style={s.stepRow}><Text style={s.stepLabel}>{unit.title} · 학습</Text><Text style={s.stepCount}>{index + 1} / {unit.vocabulary?.length ?? unit.grammar?.length}</Text></View><View style={s.track}><View style={[s.trackFill, { width: `${((index + 1) / (unit.vocabulary?.length ?? unit.grammar?.length ?? 1)) * 100}%` }]} /></View>
           <View style={s.learnCard}>
             <Text style={s.cardLabel}>{unit.vocabulary ? '단어와 읽기' : '문법 표현'}</Text>
-            <Text style={s.learnMain}>{'word' in entry ? entry.word : entry.pattern}</Text>
+            {'word' in entry ? <Text style={s.learnMain}>{entry.word}</Text> : <GrammarExpression key={`${unit.id}-${index}`} pattern={entry.pattern} example={entry.example} focus={entry.focus ?? (entry.example.includes(entry.question.answer) ? entry.question.answer : undefined)} furigana={entry.furigana} />}
             {'reading' in entry ? <Text style={s.learnReading}>{entry.reading}</Text> : null}
             <View style={s.divider} /><Text style={s.cardLabel}>뜻과 쓰임</Text><Text style={s.learnMeaning}>{entry.meaning}</Text>
             {'formation' in entry && entry.formation ? <><Text style={s.cardLabel}>접속 형태</Text><Text style={s.learnExplanation}>{entry.formation}</Text></> : null}
             {'explanation' in entry ? <Text style={s.learnExplanation}>{entry.explanation}</Text> : null}
           </View>
-          <View style={s.exampleCard}><Text style={s.cardLabel}>예문</Text><Text style={s.exampleJapanese}>{entry.example}</Text><Text style={s.exampleKorean}>{entry.translation}</Text></View>
+          <View style={s.exampleCard}><Text style={s.cardLabel}>예문{unit.grammar ? ' · 문법 표현 강조' : ''}</Text>{'pattern' in entry ? <SpokenGrammarExample key={`${unit.id}-${index}`} text={entry.example} focus={grammarFocus(entry.pattern, entry.example, entry.focus ?? (entry.example.includes(entry.question.answer) ? entry.question.answer : undefined))} furigana={entry.furigana} style={s.exampleJapanese} /> : <Text style={s.exampleJapanese}>{entry.example}</Text>}<Text style={s.exampleKorean}>{entry.translation}</Text></View>
         </> : null}
 
         {stage === 'quiz' && unit && current ? <>
