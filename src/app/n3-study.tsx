@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '@/components/header-back-button';
 import { n3Areas, unitsForArea, type ChoiceQuestion, type N3Area, type N3Unit } from '@/content/n3';
 import kanjiReference from '@/content/n3-kanji-reference.json';
 import { bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
@@ -37,7 +38,7 @@ function questionsFor(unit: N3Unit): ChoiceQuestion[] {
     }),
     ...(unit.questions ?? []),
   ];
-  if (unit.grammar) return unit.grammar.map((entry) => entry.question);
+  if (unit.grammar) return [...unit.grammar.map((entry) => entry.question), ...(unit.questions ?? [])];
   return [...(unit.questions ?? [])];
 }
 
@@ -108,13 +109,15 @@ export default function N3StudyScreen() {
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-    <View style={s.header}><Pressable onPress={back} style={s.back} accessibilityRole="button" accessibilityLabel="뒤로 가기"><Text style={s.backText}>‹</Text></Pressable><Text style={s.headerTitle}>N3 {section.title}</Text><View style={s.back} /></View>
+    <View style={s.header}><HeaderBackButton onPress={back} /><Text style={s.headerTitle}>N3 {section.title}</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
       <View style={s.content}>
         {stage === 'units' ? <>
-          <View style={s.hero}><Text style={s.eyebrow}>{area === 'vocabulary' ? 'N3 · N4 · N5 어휘 학습' : 'N3 · 자체 작성 기초 연습 자료'}</Text><Text style={s.heroTitle}>{section.title}부터 차근차근</Text><Text style={s.heroText}>{area === 'vocabulary' ? `중복을 제거한 어휘 ${bankCounts.total.toLocaleString()}개를 20개씩 학습하고 뜻 문제를 풉니다.` : `${section.description} 중심으로 연습합니다. ${area === 'listening' ? '음성은 기기의 일본어 음성 읽기로 재생됩니다.' : '학습 후 문제를 풀고 해설을 확인하세요.'}`}</Text><Text style={s.heroProgress}>{area === 'vocabulary' ? `어휘 학습 단원 ${bankCompleted} / ${bankUnitCount}개 풀이` : `수록된 단원 중 ${units.filter((item) => results[item.id]).length} / ${units.length}개 풀이`}</Text></View>
+          <View style={s.hero}><Text style={s.eyebrow}>{area === 'vocabulary' ? 'N3 · N4 · N5 어휘 학습' : area === 'grammar' ? 'N3 문법 학습 · N4·N5 기초 참고' : 'N3 · 자체 작성 기초 연습 자료'}</Text><Text style={s.heroTitle}>{section.title}부터 차근차근</Text><Text style={s.heroText}>{area === 'vocabulary' ? `중복을 제거한 어휘 ${bankCounts.total.toLocaleString()}개를 20개씩 학습하고 뜻 문제를 풉니다.` : area === 'grammar' ? 'N3 문법 101개를 한국어 설명과 예문으로 익히고 문제로 확인합니다. N4·N5 기초 문법은 참고 자료에서 확인할 수 있습니다.' : `${section.description} 중심으로 연습합니다. ${area === 'listening' ? '음성은 기기의 일본어 음성 읽기로 재생됩니다.' : '학습 후 문제를 풀고 해설을 확인하세요.'}`}</Text><Text style={s.heroProgress}>{area === 'vocabulary' ? `어휘 학습 단원 ${bankCompleted} / ${bankUnitCount}개 풀이` : `수록된 단원 중 ${units.filter((item) => results[item.id]).length} / ${units.length}개 풀이`}</Text></View>
           {area === 'vocabulary' ? <Pressable onPress={() => router.push('/n3-kanji-drill')} style={s.unitCard} accessibilityRole="button" accessibilityLabel="N3 한자 읽기 참고 연습 열기"><View style={s.unitNumber}><Text style={s.unitNumberText}>漢</Text></View><View style={s.flex}><Text style={s.unitTitle}>한자 읽기 {kanjiReference.items.length}개 참고 연습</Text><Text style={s.unitDescription}>공개 어휘 목록을 사전과 대조한 읽기 문제 · 뜻과 문맥은 포함하지 않음</Text></View><Text style={s.chevron}>›</Text></Pressable> : null}
-          {area === 'vocabulary' || area === 'grammar' ? <Pressable onPress={() => router.push({ pathname: '/n3-reference', params: { kind: area } })} style={s.unitCard} accessibilityRole="button" accessibilityLabel="N3 확장 참고 자료 열기"><View style={s.unitNumber}><Text style={s.unitNumberText}>本</Text></View><View style={s.flex}><Text style={s.unitTitle}>{area === 'vocabulary' ? '공개 참고 어휘 2,963개' : '문법 280개'} 찾아보기</Text><Text style={s.unitDescription}>N3와 선행 N4·N5 · 한국어 뜻과 예문 · 검색 및 학습 표시</Text></View><Text style={s.chevron}>›</Text></Pressable> : null}
+          {area === 'vocabulary' ? <Pressable onPress={() => router.push('/n3-vocabulary-mock')} style={s.unitCard} accessibilityRole="button" accessibilityLabel="N3 문자 어휘 모의고사와 공식 자료 열기"><View style={s.unitNumber}><Text style={s.unitNumberText}>試</Text></View><View style={s.flex}><Text style={s.unitTitle}>문자·어휘 모의고사 · 공식 자료</Text><Text style={s.unitDescription}>자체 작성 25문항 × 2회 · 30분 시간제한 · JLPT 공식 예제 링크</Text></View><Text style={s.chevron}>›</Text></Pressable> : null}
+          {area === 'grammar' ? <Pressable onPress={() => router.push('/n3-grammar-mock')} style={s.unitCard} accessibilityRole="button" accessibilityLabel="N3 문법 모의고사와 공식 자료 열기"><View style={s.unitNumber}><Text style={s.unitNumberText}>試</Text></View><View style={s.flex}><Text style={s.unitTitle}>문법 모의고사 · 공식 자료</Text><Text style={s.unitDescription}>자체 작성 20문항 × 2회 · 25분 시간제한 · JLPT 공식 예제 링크</Text></View><Text style={s.chevron}>›</Text></Pressable> : null}
+          {area === 'vocabulary' || area === 'grammar' ? <Pressable onPress={() => router.push({ pathname: '/n3-reference', params: { kind: area } })} style={s.unitCard} accessibilityRole="button" accessibilityLabel="N3 확장 참고 자료 열기"><View style={s.unitNumber}><Text style={s.unitNumberText}>本</Text></View><View style={s.flex}><Text style={s.unitTitle}>{area === 'vocabulary' ? '공개 참고 어휘 2,963개' : '문법 280개'} 찾아보기</Text><Text style={s.unitDescription}>{area === 'grammar' ? 'N3 해설·예문 번역과 N4·N5 기초 문법 뜻 · 검색 및 학습 표시' : 'N3와 선행 N4·N5 · 한국어 뜻과 예문 · 검색 및 학습 표시'}</Text></View><Text style={s.chevron}>›</Text></Pressable> : null}
           <Text style={s.sectionTitle}>학습 단원</Text>
           {area === 'vocabulary' ? <>
             <View style={s.bankLevels}>{(['N3', 'N4', 'N5'] as const).map((level) => <Pressable key={level} onPress={() => { setBankLevel(level); setBankPage(0); }} style={[s.bankLevel, bankLevel === level && s.bankLevelActive]} accessibilityRole="button"><Text style={[s.bankLevelText, bankLevel === level && s.bankLevelTextActive]}>{level} · {batchCount(level)}단원</Text></Pressable>)}</View>
@@ -129,7 +132,7 @@ export default function N3StudyScreen() {
             <Text style={s.note}>기존 한국어 해설 어휘 144개를 주제별로 다시 연습할 수 있습니다. 위 전체 학습 단원에도 중복 없이 포함되어 있습니다.</Text>
           </> : null}
           {units.map((item, itemIndex) => <Pressable key={item.id} onPress={() => start(item)} style={s.unitCard} accessibilityRole="button" accessibilityLabel={`${item.title} 시작`}><View style={s.unitNumber}><Text style={s.unitNumberText}>{String(itemIndex + 1).padStart(2, '0')}</Text></View><View style={s.flex}><Text style={s.unitTitle}>{item.title}</Text><Text style={s.unitDescription}>{item.description}</Text><Text style={s.unitMeta}>{item.vocabulary?.length ?? item.grammar?.length ?? item.questions?.length}개 {item.vocabulary || item.grammar ? '학습 항목' : '문제'}{results[item.id] ? ` · 최고 ${results[item.id].score}/${results[item.id].total}` : ''}</Text></View><Text style={s.chevron}>›</Text></Pressable>)}
-          <Text style={s.note}>이 자료는 JLPT 공식 문제나 지정 어휘 목록이 아니며, 이 단원을 모두 풀어도 N3 합격 준비가 끝나는 것은 아닙니다. 실전 문제와 시간제한 모의고사를 추가로 연습하세요.</Text>
+          <Text style={s.note}>이 자료는 JLPT 공식 문제나 지정 {area === 'grammar' ? '문법' : '어휘'} 목록이 아니며, 이 단원을 모두 풀어도 N3 합격 준비가 끝나는 것은 아닙니다. 실전 문제와 시간제한 모의고사를 추가로 연습하세요.</Text>
         </> : null}
 
         {stage === 'learn' && unit && entry ? <>
@@ -139,6 +142,7 @@ export default function N3StudyScreen() {
             <Text style={s.learnMain}>{'word' in entry ? entry.word : entry.pattern}</Text>
             {'reading' in entry ? <Text style={s.learnReading}>{entry.reading}</Text> : null}
             <View style={s.divider} /><Text style={s.cardLabel}>뜻과 쓰임</Text><Text style={s.learnMeaning}>{entry.meaning}</Text>
+            {'formation' in entry && entry.formation ? <><Text style={s.cardLabel}>접속 형태</Text><Text style={s.learnExplanation}>{entry.formation}</Text></> : null}
             {'explanation' in entry ? <Text style={s.learnExplanation}>{entry.explanation}</Text> : null}
           </View>
           <View style={s.exampleCard}><Text style={s.cardLabel}>예문</Text><Text style={s.exampleJapanese}>{entry.example}</Text><Text style={s.exampleKorean}>{entry.translation}</Text></View>
@@ -168,7 +172,7 @@ export default function N3StudyScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg }, flex: { flex: 1 }, scroll: { flexGrow: 1, paddingBottom: 24 }, content: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 20 },
-  header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line }, back: { width: 40, height: 40, justifyContent: 'center' }, backText: { color: colors.ink, fontSize: 32, lineHeight: 36 }, headerTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
+  header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line }, back: { width: 40, height: 40 }, headerTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
   hero: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#F4D9E0', borderRadius: 19, padding: 20 }, eyebrow: { color: colors.pink, fontFamily: fonts.bold, fontSize: 11 }, heroTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 20, marginTop: 7 }, heroText: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 21, marginTop: 9 }, heroProgress: { color: colors.green, fontFamily: fonts.semi, fontSize: 12, marginTop: 15 }, sectionTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 17, marginTop: 23, marginBottom: 12 },
   unitCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 14, padding: 15, marginBottom: 10 }, unitNumber: { width: 38, height: 38, borderRadius: 11, backgroundColor: colors.pale, alignItems: 'center', justifyContent: 'center' }, unitNumberText: { color: colors.pink, fontFamily: fonts.number, fontSize: 13 }, unitTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 14 }, unitDescription: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginTop: 3 }, unitMeta: { color: colors.pink, fontFamily: fonts.medium, fontSize: 10, marginTop: 7 }, chevron: { color: colors.pink, fontSize: 24 }, note: { color: colors.muted, fontFamily: fonts.body, fontSize: 10, lineHeight: 17, marginTop: 8 },
   bankLevels: { flexDirection: 'row', gap: 8, marginBottom: 10 }, bankLevel: { flex: 1, alignItems: 'center', paddingVertical: 11, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 10 }, bankLevelActive: { backgroundColor: colors.pale, borderColor: colors.pink }, bankLevelText: { color: colors.muted, fontFamily: fonts.semi, fontSize: 11 }, bankLevelTextActive: { color: colors.pink }, bankCount: { color: colors.muted, fontFamily: fonts.body, fontSize: 11, marginBottom: 13 }, bankPager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }, bankPagerButton: { padding: 12 }, bankPagerText: { color: colors.pink, fontFamily: fonts.bold, fontSize: 12 }, bankPageText: { color: colors.muted, fontFamily: fonts.medium, fontSize: 11 },

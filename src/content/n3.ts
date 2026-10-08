@@ -1,4 +1,5 @@
 import { n3VocabularyUnits } from './n3-vocabulary';
+import { n3GrammarUnits } from './n3-grammar-bank';
 
 export type N3Area = 'vocabulary' | 'grammar' | 'reading' | 'listening';
 
@@ -21,6 +22,7 @@ export type VocabularyEntry = {
 export type GrammarEntry = {
   pattern: string;
   meaning: string;
+  formation?: string;
   explanation: string;
   example: string;
   translation: string;
@@ -209,9 +211,11 @@ const originalVocabularyContext: Record<string, ChoiceQuestion> = {
 };
 
 export const n3Units: readonly N3Unit[] = [
-  ...originalN3Units.map((unit) => unit.area === 'vocabulary'
+  ...originalN3Units.filter((unit) => unit.area !== 'grammar').map((unit) => unit.area === 'vocabulary'
     ? { ...unit, questions: [originalVocabularyContext[unit.id]] }
     : unit),
+  ...n3GrammarUnits,
+  ...originalN3Units.filter((unit) => unit.area === 'grammar'),
   ...n3VocabularyUnits,
 ];
 

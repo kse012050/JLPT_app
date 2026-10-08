@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '@/components/header-back-button';
 import { n5VocabularyUnits, type VocabularyUnit } from '@/content/vocabulary';
 import { getCompletedVocabularyUnits, saveCompletedVocabularyUnit } from '@/storage/vocabulary-progress';
 
@@ -71,7 +72,7 @@ export default function VocabularyScreen() {
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
     <View style={s.header}>
-      <Pressable onPress={() => stage === 'units' ? router.back() : setStage('units')} style={s.back} accessibilityRole="button" accessibilityLabel="뒤로 가기"><Text style={s.backText}>‹</Text></Pressable>
+      <HeaderBackButton onPress={() => stage === 'units' ? router.back() : setStage('units')} />
       <Text style={s.headerTitle}>N5 문자·어휘</Text>
       <View style={s.headerSpacer} />
     </View>
@@ -131,7 +132,7 @@ export default function VocabularyScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: c.bg }, header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: c.white, borderBottomWidth: 1, borderBottomColor: c.line }, back: { width: 40, height: 40, justifyContent: 'center' }, backText: { color: c.ink, fontSize: 32, lineHeight: 36 }, headerTitle: { color: c.ink, fontFamily: f.bold, fontSize: 16 }, headerSpacer: { width: 40 },
+  screen: { flex: 1, backgroundColor: c.bg }, header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: c.white, borderBottomWidth: 1, borderBottomColor: c.line }, headerTitle: { color: c.ink, fontFamily: f.bold, fontSize: 16 }, headerSpacer: { width: 40 },
   scroll: { flexGrow: 1, paddingBottom: 24 }, content: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 20 }, flex: { flex: 1 },
   hero: { backgroundColor: c.white, borderWidth: 1, borderColor: '#F4D9E0', borderRadius: 19, padding: 20 }, eyebrow: { color: c.pink, fontFamily: f.bold, fontSize: 11 }, heroTitle: { color: c.ink, fontFamily: f.bold, fontSize: 20, marginTop: 7 }, heroText: { color: c.muted, fontFamily: f.body, fontSize: 12, lineHeight: 21, marginTop: 9 }, heroProgress: { color: c.green, fontFamily: f.semi, fontSize: 12, marginTop: 15 }, sectionTitle: { color: c.ink, fontFamily: f.bold, fontSize: 17, marginTop: 23, marginBottom: 12 },
   unitCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.white, borderWidth: 1, borderColor: c.line, borderRadius: 14, padding: 15, marginBottom: 10 }, unitNumber: { width: 38, height: 38, borderRadius: 11, backgroundColor: c.pale, alignItems: 'center', justifyContent: 'center' }, unitNumberText: { color: c.pink, fontFamily: f.number, fontSize: 13 }, unitTitle: { color: c.ink, fontFamily: f.bold, fontSize: 14 }, unitDescription: { color: c.muted, fontFamily: f.body, fontSize: 11, marginTop: 3 }, unitMeta: { color: c.pink, fontFamily: f.medium, fontSize: 10, marginTop: 7 }, completed: { color: c.green, fontFamily: f.bold, fontSize: 11 }, chevron: { color: c.pink, fontSize: 24 }, note: { color: c.muted, fontFamily: f.body, fontSize: 10, lineHeight: 17, marginTop: 7 },

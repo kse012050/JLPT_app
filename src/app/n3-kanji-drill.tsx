@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HeaderBackButton } from '@/components/header-back-button';
 import reference from '@/content/n3-kanji-reference.json';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
 
@@ -66,7 +67,7 @@ export default function N3KanjiDrillScreen() {
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
-    <View style={s.header}><Pressable onPress={() => stage === 'intro' ? router.back() : setStage('intro')} style={s.back} accessibilityRole="button" accessibilityLabel="뒤로 가기"><Text style={s.backText}>‹</Text></Pressable><Text style={s.headerTitle}>N3 한자 읽기 연습</Text><View style={s.back} /></View>
+    <View style={s.header}><HeaderBackButton onPress={() => stage === 'intro' ? router.back() : setStage('intro')} /><Text style={s.headerTitle}>N3 한자 읽기 연습</Text><View style={s.back} /></View>
     <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}><View style={s.content}>
       {stage === 'intro' ? <>
         <View style={s.hero}><Text style={s.eyebrow}>N3 · 공개 참고 목록</Text><Text style={s.heroTitle}>한자 읽기 {items.length}개</Text><Text style={s.heroText}>20개씩 읽기를 확인하세요. 여러 읽기가 가능한 표기, 드문 표기와 미완성 항목은 제외했습니다. 이 목록은 공식 지정 어휘가 아니며 뜻·문맥·용법 연습을 대체하지 않습니다.</Text><Text style={s.heroProgress}>{Object.keys(results).filter((key) => key.startsWith('n3-kanji-')).length} / {batchCount} 묶음 풀이 기록</Text></View>
@@ -87,7 +88,7 @@ export default function N3KanjiDrillScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg }, header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line }, back: { width: 40, height: 40, justifyContent: 'center' }, backText: { color: colors.ink, fontSize: 32, lineHeight: 36 }, headerTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
+  screen: { flex: 1, backgroundColor: colors.bg }, header: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.line }, back: { width: 40, height: 40 }, headerTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 16 },
   scroll: { flexGrow: 1, paddingBottom: 24 }, content: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 18, paddingTop: 20 },
   hero: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#F4D9E0', borderRadius: 19, padding: 20 }, eyebrow: { color: colors.pink, fontFamily: fonts.bold, fontSize: 11 }, heroTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 21, marginTop: 7 }, heroText: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, lineHeight: 21, marginTop: 10 }, heroProgress: { color: colors.green, fontFamily: fonts.semi, fontSize: 12, marginTop: 14 },
   batchCard: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 18, marginTop: 14 }, batchLabel: { color: colors.pink, fontFamily: fonts.bold, fontSize: 11 }, batchNumber: { color: colors.ink, fontFamily: fonts.number, fontSize: 26, marginTop: 6 }, batchRange: { color: colors.muted, fontFamily: fonts.body, fontSize: 12, marginTop: 3 }, saved: { color: colors.green, fontFamily: fonts.semi, fontSize: 12, marginTop: 8 }, batchButtons: { flexDirection: 'row', gap: 9, marginTop: 17, marginBottom: 12 }, smallButton: { flex: 1, height: 42, borderWidth: 1, borderColor: colors.pink, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 10 }, smallButtonText: { color: colors.pink, fontFamily: fonts.bold, fontSize: 12 }, disabled: { opacity: 0.35 }, primaryButton: { height: 48, backgroundColor: colors.pink, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 8 }, primaryText: { color: colors.white, fontFamily: fonts.bold, fontSize: 13 },
