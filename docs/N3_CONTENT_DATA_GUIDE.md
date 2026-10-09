@@ -28,7 +28,7 @@ JLPT 운영 기관은 공식 어휘·한자·문법 목록을 공개하지 않�
 | 공개 참고 원자료 | `src/content/openjlpt-n3-reference.json` | OpenJLPT 기반 어휘·문법 원문. ID·출처·라이선스를 유지한다. 공식 JLPT 지정 목록은 아니다. |
 | 어휘 한국어 뜻·예문 | `src/content/reviewed-vocabulary-ko.json`, `src/content/openjlpt-reference-ko.json` | 어휘 뜻 2,963개 항목에 교정을 반영했다. 예문 번역은 검수된 27개 항목만 학습 화면에 표시한다. |
 | 어휘 학습 단원 | `src/content/n3-vocabulary-bank.ts`, `src/content/n3-vocabulary-quiz.ts` | 중복 제거 후 2,994개 어휘를 N3·N4·N5 단원에서 학습한다. |
-| 문법 한국어 설명·문제 | `src/content/n3-grammar-ko.ts`, `src/content/n3-grammar-bank.ts`, `src/content/n3-grammar-practice.ts` | N3 101개 상세 학습, N4·N5 179개 간단 뜻, 유형별 44문항을 제공한다. |
+| 문법 한국어 설명·문제 | `src/content/n3-grammar-ko.ts`, `src/content/n3-grammar-supplement.ts`, `src/content/prerequisite-grammar-details.ts`, `src/content/n3-grammar-bank.ts`, `src/content/n3-grammar-practice.ts` | N3 182개·N4 98개·N5 81개를 단계별 단원에서 학습한다. 각 표현에 한국어 뜻·설명·대표 예문 번역·확인 문제를 제공하고, N3 유형별 연습 44문항을 별도로 제공한다. |
 | 시간제한 모의고사 | `src/content/n3-vocabulary-mock.ts`, `src/content/n3-grammar-mock.ts` | 문자·어휘 25문항씩 2회, 문법 20문항씩 2회. 모두 자체 작성 문항이며 시험과 동일한 문항 수·난도를 보장하지 않는다. |
 | 화면·학습 기록 | `src/app/n3-vocabulary-mock.tsx`, `src/app/n3-grammar-mock.tsx`, `src/storage/n3-progress.ts` | 풀이 중 정답을 숨기고 시간 종료 또는 제출 후 해설을 표시한다. 최고 점수는 기기 로컬 저장소에 남는다. |
 | 데이터 검사 | `scripts/validate-n3-content.cjs` | 항목 수·중복·보기 4개·정답 존재·유형 분포 등을 검사한다. 일본어 자연스러움과 시험 난도는 자동으로 보증하지 못한다. |
@@ -56,7 +56,7 @@ JLPT 운영 기관은 공식 어휘·한자·문법 목록을 공개하지 않�
 
 ## 문법 데이터 작업에 적용
 
-현재 참고 자료에는 N3 문법 101개, N4 98개, N5 81개, 총 280개와 예문 837개가 있다. N3 문법 101개는 13개 학습 단원에 연결했고 각 항목에 한국어 뜻·접속 형태·설명·첫 예문 번역과 표현 복원 문제를 제공한다. 기존 자체 작성 문법 항목 12개는 복습 단원으로 유지했다. N4·N5는 한국어 뜻과 접속 형태를 참고 화면에서 제공한다. 유형별 자체 작성 연습 문제는 문법 형식 20개, 문장 배열 12개, 글의 흐름 12개다. 참고 자료의 나머지 예문 번역 초안은 검수 전이므로 표시하지 않는다.
+현재 참고 자료에는 N3 문법 182개, N4 98개, N5 81개, 총 361개와 예문 918개가 있다. 기존 OpenJLPT N3 101개에 [JLPT Sensei N3 목록](https://jlptsensei.com/jlpt-n3-grammar-list/)과 [JLPTPass N3 목록](https://www.jlptpass.com/n3/grammar/) 등 비공식 범위를 대조한 81개를 보강했다. 보강한 한국어 설명·예문은 앱용으로 직접 작성했으며 외부 목록의 문장이나 해설을 옮기지 않았다. 모든 문법 표현을 8개씩 단계별 학습 단원에 연결하고 한국어 뜻·접속 형태·설명·대표 예문 번역·확인 문제를 제공한다. 기존 N3 101개는 예문 표현 복원 문제, 추가 N3 81개와 N4·N5 179개는 예문을 읽고 문법 뜻을 고르는 기초 문제로 확인한다. 원자료의 추가 일본어 예문은 학습 단원에서 음성과 읽기를 제공하지만, 한국어 번역 초안은 검수 전이므로 표시하지 않는다. 기존 자체 작성 N3 문법 12개는 복습 단원으로 유지한다. 유형별 자체 작성 연습 문제는 문법 형식 20개, 문장 배열 12개, 글의 흐름 12개다. 비공식 목록마다 분류와 개수가 다르므로 182개를 공식 합격 필수 개수로 표시하지 않는다. [JLPT 공식 FAQ](https://www.jlpt.jp/sp/e/faq/)와 [공식 문제집](https://www.jlpt.jp/e/samples/sampleindex.html)을 기준으로 남은 약점을 확인한다.
 
 문법 모의고사는 별도 자체 작성 문제 20개씩 2회, 회차당 25분으로 제공한다. 이 시간과 문항 수는 앱의 연습 기준이며 공식 N3 문법·독해 통합 시험과 같지 않다. 공식 예제와 2012·2018 공식 문제집은 [JLPT 공식 자료 페이지](https://www.jlpt.jp/e/samples/sampleindex.html)에서 직접 연다. 공식 문제와 음성은 앱에 복제하지 않는다.
 

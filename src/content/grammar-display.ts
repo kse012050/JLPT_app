@@ -34,6 +34,13 @@ export function grammarHangul(reading: string): string {
   return reading ? kanaToHangul(reading) : '';
 }
 
+/** 조사 は·へ는 표기와 발음이 다르므로 단독 문법 표현에서는 실제 발음을 사용한다. */
+export function grammarSpokenReading(pattern: string, reading: string): string {
+  if (pattern === '〜は' && reading === 'は') return 'わ';
+  if (pattern === '〜へ' && reading === 'へ') return 'え';
+  return reading;
+}
+
 const handWrittenExampleReadings: Record<string, string> = {
   '毎朝、新聞を読むことにしました。': 'まいあさ、しんぶんをよむことにしました。',
   '来月から大阪で働くことになりました。': 'らいげつからおおさかではたらくことになりました。',

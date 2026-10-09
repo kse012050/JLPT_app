@@ -8,8 +8,10 @@ import { InteractiveJapaneseWord } from '@/components/InteractiveJapaneseWord';
 import { GrammarExpression, SpokenGrammarExample } from '@/components/GrammarExpression';
 import { grammarFocus } from '@/content/grammar-display';
 import { formatKoreanMeanings } from '@/content/korean-meaning';
-import { grammarFormationKo, grammarMeaningKo, grammarPatternKo } from '@/content/n3-grammar-bank';
+import { grammarCounts, grammarFormationKo, grammarMeaningKo, grammarPatternKo } from '@/content/n3-grammar-bank';
 import { n3GrammarKo } from '@/content/n3-grammar-ko';
+import { n3GrammarSupplement } from '@/content/n3-grammar-supplement';
+import { prerequisiteGrammarDetails } from '@/content/prerequisite-grammar-details';
 import source from '@/content/openjlpt-n3-reference.json';
 import korean from '@/content/openjlpt-reference-ko.json';
 import reviewed from '@/content/reviewed-vocabulary-ko.json';
@@ -23,6 +25,12 @@ type Grammar = { id: string; pattern: string; meaning: string; meaningKo?: strin
 type Row = Word | Grammar;
 
 const reference = source as unknown as { levels: Record<Level, { vocabulary: Word[]; grammar: Grammar[] }> };
+const supplementRows: Grammar[] = n3GrammarSupplement.map((entry, index) => ({
+  id: `supplement-${index}`, pattern: entry.pattern, meaning: entry.meaning, meaningKo: entry.meaning,
+  formation: entry.formation ?? '', notes: entry.explanation, examples: [{ ja: entry.example, en: '', furigana: entry.furigana }],
+}));
+const supplementDetails = Object.fromEntries(n3GrammarSupplement.map((entry, index) => [`supplement-${index}`, entry])) as Record<string, (typeof n3GrammarSupplement)[number]>;
+const n3GrammarRows: Grammar[] = [...reference.levels.N3.grammar, ...supplementRows];
 type KoWord = { meanings: string[]; examples: string[] };
 type KoGrammar = { meaning: string; formation: string; notes: string; examples: string[] };
 const translated = korean as unknown as { levels: Record<Level, { vocabulary: Record<string, KoWord>; grammar: Record<string, KoGrammar> }> };
@@ -51,13 +59,15 @@ export default function N3ReferenceScreen() {
     getReferenceProgress().then((ids) => { setStudied(ids); setLoaded(true); }).catch(() => { setSaveError(true); setLoaded(true); });
   }, []);
 
-  const allRows: Row[] = reference.levels[level][kind];
+  const allRows: Row[] = kind === 'grammar' && level === 'N3'
+    ? n3GrammarRows
+    : reference.levels[level][kind];
   const filtered = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
     if (!term) return allRows;
     return allRows.filter((row) => kind === 'vocabulary'
       ? `${(row as Word).word} ${(row as Word).reading} ${translated.levels[level].vocabulary[row.id].meanings.join(' ')}`.toLocaleLowerCase().includes(term)
-      : `${(row as Grammar).pattern} ${grammarMeaningKo(level, row.id)}`.toLocaleLowerCase().includes(term));
+      : `${(row as Grammar).pattern} ${(row as Grammar).meaningKo ?? grammarMeaningKo(level, row.id)}`.toLocaleLowerCase().includes(term));
   }, [allRows, kind, level, query]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visible = filtered.slice(page * pageSize, (page + 1) * pageSize);
@@ -75,9 +85,9 @@ export default function N3ReferenceScreen() {
   }
 
   const header = <View style={s.content}>
-    <View style={s.hero}><Text style={s.eyebrow}>N3 합격 대비 · 공개 참고 자료</Text><Text style={s.heroTitle}>어휘·문법 확장 학습</Text><Text style={s.heroText}>N3 어휘 1,659개와 문법 101개, 선행 단계 N4·N5까지 탐색할 수 있습니다. 어휘 뜻과 문법 간단 뜻은 한국어 교정을 반영했습니다.</Text><Text style={s.heroNote}>검수하지 않은 예문 번역은 표시하지 않습니다. N3 문법은 해설과 대표 예문 번역을 제공하며, N4·N5 문법은 뜻과 접속 형태를 먼저 제공합니다. 이 목록은 공식 시험 범위가 아닙니다.</Text></View>
+    <View style={s.hero}><Text style={s.eyebrow}>N3 합격 대비 · 공개 참고 자료</Text><Text style={s.heroTitle}>어휘·문법 확장 학습</Text><Text style={s.heroText}>N3 어휘 1,659개와 N3·N4·N5 문법 {grammarCounts.total}개를 탐색할 수 있습니다. 어휘 뜻과 문법 뜻은 한국어 교정을 반영했습니다.</Text><Text style={s.heroNote}>문법은 각 표현의 한국어 설명과 대표 예문 번역을 제공합니다. 나머지 예문은 일본어 원문과 읽기를 제공합니다. 이 목록은 공식 시험 범위가 아닙니다.</Text></View>
     <View style={s.segmentRow}>{(['N3', 'N4', 'N5'] as const).map((item) => <Pressable key={item} onPress={() => chooseLevel(item)} style={[s.segment, level === item && s.segmentActive]} accessibilityRole="button"><Text style={[s.segmentText, level === item && s.segmentTextActive]}>{item}</Text></Pressable>)}</View>
-    <View style={s.segmentRow}>{([['vocabulary', '어휘'], ['grammar', '문법']] as const).map(([item, label]) => <Pressable key={item} onPress={() => chooseKind(item)} style={[s.segment, kind === item && s.segmentActive]} accessibilityRole="button"><Text style={[s.segmentText, kind === item && s.segmentTextActive]}>{label} {reference.levels[level][item].length}</Text></Pressable>)}</View>
+    <View style={s.segmentRow}>{([['vocabulary', '어휘'], ['grammar', '문법']] as const).map(([item, label]) => <Pressable key={item} onPress={() => chooseKind(item)} style={[s.segment, kind === item && s.segmentActive]} accessibilityRole="button"><Text style={[s.segmentText, kind === item && s.segmentTextActive]}>{label} {item === 'grammar' ? grammarCounts[level] : reference.levels[level].vocabulary.length}</Text></Pressable>)}</View>
     <TextInput value={query} onChangeText={(value) => { setQuery(value); setPage(0); setExpanded(null); }} placeholder={kind === 'vocabulary' ? '일본어·읽기·한국어 뜻 검색' : '문법 표현·한국어 뜻 검색'} placeholderTextColor={colors.muted} style={s.search} autoCorrect={false} accessibilityLabel="참고 자료 검색" />
     <Text style={s.count}>{filtered.length}개 중 {filtered.length ? page * pageSize + 1 : 0}–{Math.min((page + 1) * pageSize, filtered.length)}개 표시 · 학습 표시 {studiedCount}/{allRows.length}</Text>
     {saveError ? <Text style={s.error}>학습 표시를 저장하거나 불러오지 못했습니다. 저장 공간을 확인해 주세요.</Text> : null}
@@ -89,15 +99,18 @@ export default function N3ReferenceScreen() {
     const isStudied = studiedSet.has(key);
     const wordKo = kind === 'vocabulary' ? translated.levels[level].vocabulary[item.id] : null;
     const grammarKo = kind === 'grammar' && level === 'N3' ? n3GrammarKo[item.id] : null;
+    const grammarDetail = kind === 'grammar'
+      ? level === 'N3' ? supplementDetails[item.id] : prerequisiteGrammarDetails[level][item.id]
+      : null;
     const wordReviewKey = kind === 'vocabulary' ? `${level}:${(item as Word).word}:${(item as Word).reading}` : '';
     return <View style={s.card}>
       {kind === 'vocabulary'
         ? <><InteractiveJapaneseWord word={(item as Word).word} reading={(item as Word).reading} /><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{wordKo ? formatKoreanMeanings(wordKo.meanings) : ''}</Text><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Word).word} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandButton}><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>
-        : <><View style={s.cardTop}><GrammarExpression key={key} pattern={grammarPatternKo((item as Grammar).pattern)} example={item.examples[0]?.ja ?? ''} focus={grammarKo?.focus} furigana={item.examples[0]?.furigana} compact /><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Grammar).pattern} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandIcon}><Text style={s.chevron}>{isExpanded ? '⌃' : '⌄'}</Text></Pressable></View><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Grammar).pattern} 자세히 보기`}><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{grammarMeaningKo(level, item.id)}</Text><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>}
+        : <><View style={s.cardTop}><GrammarExpression key={key} pattern={grammarPatternKo((item as Grammar).pattern)} example={item.examples[0]?.ja ?? ''} focus={grammarKo?.focus ?? grammarDetail?.focus} furigana={item.examples[0]?.furigana} compact /><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Grammar).pattern} 예문 ${isExpanded ? '접기' : '보기'}`} style={s.expandIcon}><Text style={s.chevron}>{isExpanded ? '⌃' : '⌄'}</Text></Pressable></View><Pressable onPress={() => setExpanded(isExpanded ? null : key)} accessibilityRole="button" accessibilityLabel={`${(item as Grammar).pattern} 자세히 보기`}><Text style={s.englishLabel}>뜻</Text><Text style={s.meaning}>{(item as Grammar).meaningKo ?? grammarMeaningKo(level, item.id)}</Text><Text style={s.expandText}>{isExpanded ? '예문 접기 ⌃' : '예문 보기 ⌄'}</Text></Pressable></>}
       {isExpanded ? <View style={s.detail}>
-        {kind === 'grammar' ? <><Text style={s.detailLabel}>접속 형태</Text><Text style={s.detailText}>{grammarFormationKo((item as Grammar).formation)}</Text>{grammarKo ? <><Text style={s.detailLabel}>설명</Text><Text style={s.detailText}>{grammarKo.explanation}</Text></> : null}</> : null}
+        {kind === 'grammar' ? <><Text style={s.detailLabel}>접속 형태</Text><Text style={s.detailText}>{grammarFormationKo((item as Grammar).formation)}</Text>{grammarKo || grammarDetail ? <><Text style={s.detailLabel}>설명</Text><Text style={s.detailText}>{grammarKo?.explanation ?? grammarDetail?.explanation}</Text></> : null}</> : null}
         <Text style={s.detailLabel}>예문</Text>
-        {item.examples.length ? item.examples.map((example, index) => <View key={`${key}-${index}`} style={s.example}>{kind === 'grammar' ? <SpokenGrammarExample text={example.ja} focus={grammarFocus(grammarPatternKo((item as Grammar).pattern), example.ja, grammarKo?.focus)} furigana={example.furigana} style={s.japanese} /> : <Text style={s.japanese}>{example.ja}</Text>}{example.furigana ? <Text style={s.furigana}>{readingHint(example.furigana)}</Text> : null}{kind === 'grammar' ? index === 0 && grammarKo ? <Text style={s.exampleEnglish}>{grammarKo.translation}</Text> : null : reviewedExamples[wordReviewKey]?.[index] !== undefined ? <Text style={s.exampleEnglish}>{wordKo?.examples[index]}</Text> : null}{example.tatoeba_id ? <Link href={`https://tatoeba.org/sentences/show/${example.tatoeba_id}`} target="_blank" style={s.exampleSource}>Tatoeba 예문 출처 ↗</Link> : null}</View>) : <Text style={s.detailText}>원자료에 예문이 없습니다.</Text>}
+        {item.examples.length ? item.examples.map((example, index) => <View key={`${key}-${index}`} style={s.example}>{kind === 'grammar' ? <SpokenGrammarExample text={example.ja} focus={grammarFocus(grammarPatternKo((item as Grammar).pattern), example.ja, grammarKo?.focus ?? grammarDetail?.focus)} furigana={example.furigana} style={s.japanese} /> : <Text style={s.japanese}>{example.ja}</Text>}{example.furigana ? <Text style={s.furigana}>{readingHint(example.furigana)}</Text> : null}{kind === 'grammar' ? index === 0 && (grammarKo || grammarDetail) ? <Text style={s.exampleEnglish}>{grammarKo?.translation ?? grammarDetail?.translation}</Text> : null : reviewedExamples[wordReviewKey]?.[index] !== undefined ? <Text style={s.exampleEnglish}>{wordKo?.examples[index]}</Text> : null}{example.tatoeba_id ? <Link href={`https://tatoeba.org/sentences/show/${example.tatoeba_id}`} target="_blank" style={s.exampleSource}>Tatoeba 예문 출처 ↗</Link> : null}</View>) : <Text style={s.detailText}>원자료에 예문이 없습니다.</Text>}
       </View> : null}
       <Pressable onPress={() => toggleStudied(key)} disabled={!loaded} style={[s.studiedButton, isStudied && s.studiedButtonActive]} accessibilityRole="button" accessibilityLabel={isStudied ? '학습 표시 해제' : '학습함으로 표시'}><Text style={[s.studiedText, isStudied && s.studiedTextActive]}>{isStudied ? '✓ 학습함' : '학습함으로 표시'}</Text></Pressable>
     </View>;
@@ -105,7 +118,7 @@ export default function N3ReferenceScreen() {
 
   const footer = <View style={s.footer}>
     <View style={s.pageControls}><Pressable onPress={() => changePage(-1)} disabled={page === 0} style={[s.pageButton, page === 0 && s.disabled]} accessibilityRole="button"><Text style={s.pageText}>이전</Text></Pressable><Text style={s.pageNumber}>{page + 1} / {pageCount}</Text><Pressable onPress={() => changePage(1)} disabled={page === pageCount - 1} style={[s.pageButton, page === pageCount - 1 && s.disabled]} accessibilityRole="button"><Text style={s.pageText}>다음</Text></Pressable></View>
-    <View style={s.source}><Text style={s.sourceTitle}>자료 출처와 범위</Text><Text style={s.sourceText}>OpenJLPT 가공 자료 · CC BY-SA 4.0. 어휘 예문에는 Tatoeba 자료가 포함됩니다. 한국어 뜻과 N3 문법 대표 예문은 교정 내용을 반영했습니다. 번역이 표시되지 않는 예문은 원문만 참고하세요.</Text><Link href="https://github.com/evanclan/OpenJLPT/blob/main/NOTICE.md" target="_blank" style={s.sourceLink}>원자료 출처 보기 ↗</Link><Link href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" style={s.sourceLink}>CC BY-SA 4.0 보기 ↗</Link><Link href="https://tatoeba.org/" target="_blank" style={s.sourceLink}>Tatoeba 보기 ↗</Link></View>
+    <View style={s.source}><Text style={s.sourceTitle}>자료 출처와 범위</Text><Text style={s.sourceText}>OpenJLPT 가공 자료는 CC BY-SA 4.0을 따릅니다. N3 문법 81개는 비공식 목록을 대조하고 설명·예문을 직접 작성해 보강했습니다. 어휘 예문에는 Tatoeba 자료가 포함됩니다. 문법 {grammarCounts.total}개는 한국어 설명과 대표 예문 번역을 제공합니다. 이 개수는 JLPT 공식 필수 개수가 아닙니다.</Text><Link href="https://github.com/evanclan/OpenJLPT/blob/main/NOTICE.md" target="_blank" style={s.sourceLink}>원자료 출처 보기 ↗</Link><Link href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" style={s.sourceLink}>CC BY-SA 4.0 보기 ↗</Link><Link href="https://tatoeba.org/" target="_blank" style={s.sourceLink}>Tatoeba 보기 ↗</Link></View>
   </View>;
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}><View style={s.header}><HeaderBackButton onPress={() => router.back()} /><Text style={s.headerTitle}>N3 확장 참고 자료</Text><View style={s.back} /></View><FlatList data={visible} keyExtractor={(item) => item.id} renderItem={renderRow} ListHeaderComponent={header} ListFooterComponent={footer} contentContainerStyle={s.list} keyboardShouldPersistTaps="handled" initialNumToRender={8} windowSize={5} /></SafeAreaView>;

@@ -1,5 +1,5 @@
 import { n3VocabularyUnits } from './n3-vocabulary';
-import { n3GrammarUnits } from './n3-grammar-bank';
+import { n3GrammarUnits, prerequisiteGrammarUnits } from './n3-grammar-bank';
 
 export type N3Area = 'vocabulary' | 'grammar' | 'reading' | 'listening';
 
@@ -23,6 +23,7 @@ export type GrammarEntry = {
   pattern: string;
   focus?: string;
   furigana?: string;
+  additionalExamples?: readonly { ja: string; furigana?: string }[];
   meaning: string;
   formation?: string;
   explanation: string;
@@ -34,6 +35,7 @@ export type GrammarEntry = {
 export type N3Unit = {
   id: string;
   area: N3Area;
+  grammarLevel?: 'N3' | 'N4' | 'N5';
   title: string;
   description: string;
   vocabulary?: readonly VocabularyEntry[];
@@ -217,6 +219,7 @@ export const n3Units: readonly N3Unit[] = [
     ? { ...unit, questions: [originalVocabularyContext[unit.id]] }
     : unit),
   ...n3GrammarUnits,
+  ...prerequisiteGrammarUnits,
   ...originalN3Units.filter((unit) => unit.area === 'grammar'),
   ...n3VocabularyUnits,
 ];

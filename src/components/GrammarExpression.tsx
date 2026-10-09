@@ -2,7 +2,7 @@ import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, type StyleProp, type TextStyle, View } from 'react-native';
 
-import { grammarFocus, grammarHangul, grammarReading, grammarSentenceReading } from '@/content/grammar-display';
+import { grammarFocus, grammarHangul, grammarReading, grammarSentenceReading, grammarSpokenReading } from '@/content/grammar-display';
 
 type Props = { pattern: string; example: string; focus?: string; furigana?: string; compact?: boolean };
 
@@ -12,7 +12,7 @@ export function GrammarExpression({ pattern, example, focus, furigana, compact =
   const request = useRef(0);
   const point = grammarFocus(pattern, example, focus);
   const spokenText = point || pattern.replace(/（[^）]*）/gu, '').split('/')[0].replace(/^〜/u, '').trim();
-  const reading = grammarReading(example, furigana, point || spokenText);
+  const reading = grammarSpokenReading(pattern, grammarReading(example, furigana, point || spokenText));
   const hangul = grammarHangul(reading);
 
   useEffect(() => {

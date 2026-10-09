@@ -20,7 +20,9 @@ const openReference = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/co
 const koreanReference = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/openjlpt-reference-ko.json'), 'utf8'));
 const reviewedVocabulary = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/content/reviewed-vocabulary-ko.json'), 'utf8'));
 const { n3GrammarKo, prerequisiteGrammarMeanings } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-ko.ts'));
-const { n3GrammarEntries, n3GrammarUnits, grammarFormationKo, grammarMeaningKo } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-bank.ts'));
+const { n3GrammarEntries, n3GrammarUnits, prerequisiteGrammarEntries, prerequisiteGrammarUnits, grammarFormationKo, grammarMeaningKo } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-bank.ts'));
+const { prerequisiteGrammarDetails } = loadTsModule(path.join(__dirname, '../src/content/prerequisite-grammar-details.ts'));
+const { grammarFocus, grammarReading, grammarSentenceReading } = loadTsModule(path.join(__dirname, '../src/content/grammar-display.ts'));
 const { n3GrammarPractice } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-practice.ts'));
 const { n3GrammarMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-mock.ts'));
 const { n3VocabularyMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-mock.ts'));
@@ -125,6 +127,8 @@ for (const level of ['N3', 'N4', 'N5']) {
     if (/[A-Za-z]/.test(grammarFormationKo(entry.formation))) errors.push(`${level}/${entry.id}: 접속 형태 영어 표기 잔존`);
     if (level !== 'N3') {
       if (!explanations[entry.id]) errors.push(`${level}/${entry.id}: 선행 문법 뜻 누락`);
+      const detail = prerequisiteGrammarDetails[level][entry.id];
+      if (!detail?.explanation || !detail.translation) errors.push(`${level}/${entry.id}: 한국어 설명·대표 예문 번역 누락`);
       continue;
     }
     const review = n3GrammarKo[entry.id];
@@ -132,7 +136,32 @@ for (const level of ['N3', 'N4', 'N5']) {
     if (!entry.examples[0]?.ja.includes(review?.focus)) errors.push(`${level}/${entry.id}: 문법 문제 빈칸 위치 오류`);
   }
 }
-if (n3GrammarEntries.length !== 101 || n3GrammarUnits.length !== 13) errors.push('N3 문법 학습 단원 수 오류');
+if (n3GrammarEntries.length !== 182 || n3GrammarUnits.length !== Math.ceil(182 / 8)) errors.push('N3 문법 학습 단원 수 오류');
+if (prerequisiteGrammarUnits.length !== 24) errors.push('N4·N5 문법 학습 단원 수 오류');
+const grammarEntriesByLevel = { N3: n3GrammarEntries, N4: prerequisiteGrammarEntries.N4, N5: prerequisiteGrammarEntries.N5 };
+const grammarExampleCount = Object.values(grammarEntriesByLevel).flat().reduce((total, entry) => total + 1 + (entry.additionalExamples?.length ?? 0), 0);
+if (grammarExampleCount !== 918) errors.push(`문법 예문 누락: ${grammarExampleCount}/918`);
+for (const level of ['N4', 'N5']) {
+  const sourceEntries = openReference.levels[level].grammar;
+  const entries = prerequisiteGrammarEntries[level];
+  const units = prerequisiteGrammarUnits.filter((unit) => unit.grammarLevel === level);
+  if (entries.length !== sourceEntries.length || units.flatMap((unit) => unit.grammar).length !== entries.length) errors.push(`${level} 문법 학습 단원 누락`);
+  if (Object.keys(prerequisiteGrammarDetails[level]).length !== sourceEntries.length) errors.push(`${level} 한국어 상세 자료 수 오류`);
+  for (const [index, entry] of entries.entries()) {
+    const source = sourceEntries[index];
+    if (!entry.explanation || !/[가-힣]/u.test(entry.translation) || !entry.formation || entry.example !== sourceEntries[index].examples[0].ja) errors.push(`${level}/${index}: 학습 내용·대표 예문 연결 오류`);
+    if (entry.additionalExamples?.length !== sourceEntries[index].examples.length - 1) errors.push(`${level}/${index}: 추가 예문 누락`);
+    const focus = grammarFocus(entry.pattern, entry.example, entry.focus);
+    const speechText = focus || entry.pattern.replace(/（[^）]*）/gu, '').split('/')[0].replace(/^〜/u, '').trim();
+    if (!grammarReading(entry.example, entry.furigana, speechText)) errors.push(`${level}/${source.id}: 문법 표현 읽기 누락`);
+    if (source.examples.some((example) => !grammarSentenceReading(example.ja, example.furigana))) errors.push(`${level}/${source.id}: 예문 읽기 누락`);
+    checkQuestion(entry.question, `${level} 문법 ${index}`);
+  }
+}
+if (n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length !== 361) errors.push('문법 참고 표현 361개 누락');
+if (n3GrammarUnits.flatMap((unit) => unit.grammar).length !== n3GrammarEntries.length) errors.push('N3 문법 단원 연결 누락');
+const n3GrammarPatterns = n3GrammarEntries.map((entry) => entry.pattern);
+if (new Set(n3GrammarPatterns).size !== n3GrammarPatterns.length) errors.push('N3 문법 표기 중복');
 if (n3GrammarPractice.length !== 44) errors.push(`문법 유형별 문제 수 오류: ${n3GrammarPractice.length}/44`);
 for (const kind of ['문법 형식', '문장 배열', '글의 흐름']) {
   if (!n3GrammarPractice.some((question) => question.kind === kind)) errors.push(`${kind}: 문법 문제 유형 누락`);
@@ -140,6 +169,8 @@ for (const kind of ['문법 형식', '문장 배열', '글의 흐름']) {
 for (const [index, entry] of n3GrammarEntries.entries()) {
   if (!entry.formation || !entry.translation || !entry.explanation) errors.push(`${index}: N3 문법 학습 내용 누락`);
   if (entry.meaning.includes(';') || /[A-Za-z]/.test(entry.formation)) errors.push(`${index}: N3 문법 한국어 표기 오류`);
+  if (entry.focus && !entry.example.includes(entry.focus)) errors.push(`${index}: N3 문법 예문 표현 누락`);
+  if (entry.focus && !grammarReading(entry.example, entry.furigana, entry.focus)) errors.push(`${index}: N3 문법 표현 읽기 누락`);
   checkQuestion(entry.question, `N3 문법 ${index}`);
 }
 for (const [kind, expected] of Object.entries({ '문법 형식': 20, '문장 배열': 12, '글의 흐름': 12 })) {
@@ -219,9 +250,9 @@ for (const unit of n3Units) {
   }
 }
 
-if (n3Units.length !== 46) errors.push(`단원 수 오류: ${n3Units.length}/46`);
+if (n3Units.length !== 80) errors.push(`단원 수 오류: ${n3Units.length}/80`);
 if (vocabularyReviewQuestions !== 42) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/42`);
-for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 113, reading: 12, listening: 12 })) {
+for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 373, reading: 12, listening: 12 })) {
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
 
@@ -229,5 +260,5 @@ if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, N3 문법 ${n3GrammarEntries.length}개 학습·선행 문법 ${Object.keys(prerequisiteGrammarMeanings.N4).length + Object.keys(prerequisiteGrammarMeanings.N5).length}개 한국어 뜻·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항, 청해 ${counts.listening}문항`);
+  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length}개 학습·대표 예문 한국어 번역·자체 작성 복습 12개·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항, 청해 ${counts.listening}문항`);
 }
