@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "JLPT 완주",
-    "slug": "app",
+    "slug": "jlpt-wanju",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -11,6 +11,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.sungeunkim.jlptwanju",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,6 +39,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4c8e322a-0a63-48e4-8d20-ef8bb0accee3"
+      }
+    },
+    "owner": "sungeunkim"
   }
 }
