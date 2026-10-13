@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HeaderBackButton } from '@/components/header-back-button';
 import { n3GrammarMocks } from '@/content/n3-grammar-mock';
+import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
 
 const officialUrl = 'https://www.jlpt.jp/e/samples/sampleindex.html';
@@ -95,7 +96,7 @@ export default function N3GrammarMockScreen() {
           <View style={s.progress}><Text style={s.eyebrow}>{mock.title} · {questionIndex + 1}/{mock.questions.length}</Text><Text style={s.timer}>남은 시간 {clock(remaining)}</Text></View>
           <View style={s.track}><View style={[s.trackFill, { width: `${((questionIndex + 1) / mock.questions.length) * 100}%` }]} /></View>
           <View style={s.card}><Text style={s.eyebrow}>{question.kind}</Text><Text style={s.prompt}>{question.prompt}</Text></View>
-          {question.choices.map((choice) => <Pressable key={choice} onPress={() => choose(choice)} style={[s.choice, answers[questionIndex] === choice && s.choiceSelected]} accessibilityRole="button" accessibilityState={{ selected: answers[questionIndex] === choice }}><Text style={s.choiceText}>{choice}</Text></Pressable>)}
+          {questionChoices(question).map((choice) => <Pressable key={choice} onPress={() => choose(choice)} style={[s.choice, answers[questionIndex] === choice && s.choiceSelected]} accessibilityRole="button" accessibilityState={{ selected: answers[questionIndex] === choice }}><Text style={s.choiceText}>{choice}</Text></Pressable>)}
           <Text style={s.answered}>답한 문제 {answered}/{mock.questions.length} · 제출 전까지 정답은 표시하지 않습니다.</Text>
           <View style={s.navigation}><Pressable onPress={() => setQuestionIndex(Math.max(0, questionIndex - 1))} disabled={questionIndex === 0} style={[s.navButton, questionIndex === 0 && s.disabled]} accessibilityRole="button"><Text style={s.secondaryText}>이전</Text></Pressable><Pressable onPress={() => setQuestionIndex(Math.min(mock.questions.length - 1, questionIndex + 1))} disabled={questionIndex === mock.questions.length - 1} style={[s.navButton, questionIndex === mock.questions.length - 1 && s.disabled]} accessibilityRole="button"><Text style={s.secondaryText}>다음</Text></Pressable></View>
           <Pressable onPress={() => setSubmitted(true)} style={s.primary} accessibilityRole="button"><Text style={s.primaryText}>제출하고 채점하기</Text></Pressable>

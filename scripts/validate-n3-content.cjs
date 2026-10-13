@@ -136,11 +136,11 @@ for (const level of ['N3', 'N4', 'N5']) {
     if (!entry.examples[0]?.ja.includes(review?.focus)) errors.push(`${level}/${entry.id}: 문법 문제 빈칸 위치 오류`);
   }
 }
-if (n3GrammarEntries.length !== 182 || n3GrammarUnits.length !== Math.ceil(182 / 8)) errors.push('N3 문법 학습 단원 수 오류');
+if (n3GrammarEntries.length !== 192 || n3GrammarUnits.length !== Math.ceil(192 / 8)) errors.push('N3 문법 학습 단원 수 오류');
 if (prerequisiteGrammarUnits.length !== 24) errors.push('N4·N5 문법 학습 단원 수 오류');
 const grammarEntriesByLevel = { N3: n3GrammarEntries, N4: prerequisiteGrammarEntries.N4, N5: prerequisiteGrammarEntries.N5 };
 const grammarExampleCount = Object.values(grammarEntriesByLevel).flat().reduce((total, entry) => total + 1 + (entry.additionalExamples?.length ?? 0), 0);
-if (grammarExampleCount !== 918) errors.push(`문법 예문 누락: ${grammarExampleCount}/918`);
+if (grammarExampleCount !== 928) errors.push(`문법 예문 누락: ${grammarExampleCount}/928`);
 for (const level of ['N4', 'N5']) {
   const sourceEntries = openReference.levels[level].grammar;
   const entries = prerequisiteGrammarEntries[level];
@@ -158,11 +158,11 @@ for (const level of ['N4', 'N5']) {
     checkQuestion(entry.question, `${level} 문법 ${index}`);
   }
 }
-if (n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length !== 361) errors.push('문법 참고 표현 361개 누락');
+if (n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length !== 371) errors.push('문법 참고 표현 371개 누락');
 if (n3GrammarUnits.flatMap((unit) => unit.grammar).length !== n3GrammarEntries.length) errors.push('N3 문법 단원 연결 누락');
 const n3GrammarPatterns = n3GrammarEntries.map((entry) => entry.pattern);
 if (new Set(n3GrammarPatterns).size !== n3GrammarPatterns.length) errors.push('N3 문법 표기 중복');
-if (n3GrammarPractice.length !== 44) errors.push(`문법 유형별 문제 수 오류: ${n3GrammarPractice.length}/44`);
+if (n3GrammarPractice.length !== 100) errors.push(`문법 유형별 문제 수 오류: ${n3GrammarPractice.length}/100`);
 for (const kind of ['문법 형식', '문장 배열', '글의 흐름']) {
   if (!n3GrammarPractice.some((question) => question.kind === kind)) errors.push(`${kind}: 문법 문제 유형 누락`);
 }
@@ -173,13 +173,15 @@ for (const [index, entry] of n3GrammarEntries.entries()) {
   if (entry.focus && !grammarReading(entry.example, entry.furigana, entry.focus)) errors.push(`${index}: N3 문법 표현 읽기 누락`);
   checkQuestion(entry.question, `N3 문법 ${index}`);
 }
-for (const [kind, expected] of Object.entries({ '문법 형식': 20, '문장 배열': 12, '글의 흐름': 12 })) {
+for (const [kind, expected] of Object.entries({ '문법 형식': 48, '문장 배열': 26, '글의 흐름': 26 })) {
   const actual = n3GrammarPractice.filter((question) => question.kind === kind).length;
   if (actual !== expected) errors.push(`${kind}: 문제 수 오류 ${actual}/${expected}`);
 }
 for (const [index, question] of n3GrammarPractice.entries()) checkQuestion(question, `문법 유형별 문제 ${index}`);
-if (n3GrammarMocks.length !== 2) errors.push(`문법 모의고사 회차 오류: ${n3GrammarMocks.length}/2`);
-const mockPrompts = new Set();
+if (n3GrammarMocks.length !== 4) errors.push(`문법 모의고사 회차 오류: ${n3GrammarMocks.length}/4`);
+const mockPrompts = new Set(n3GrammarPractice.map((question) => question.prompt));
+if (mockPrompts.size !== n3GrammarPractice.length) errors.push('문법 단원 문제 지문 중복');
+if (new Set(n3GrammarMocks.map((mock) => mock.id)).size !== n3GrammarMocks.length) errors.push('문법 모의고사 ID 중복');
 for (const mock of n3GrammarMocks) {
   if (mock.questions.length !== 20 || mock.minutes !== 25) errors.push(`${mock.id}: 문법 모의고사 길이 오류`);
   for (const [kind, expected] of Object.entries({ '문법 형식': 12, '문장 배열': 4, '글의 흐름': 4 })) {
@@ -250,9 +252,9 @@ for (const unit of n3Units) {
   }
 }
 
-if (n3Units.length !== 80) errors.push(`단원 수 오류: ${n3Units.length}/80`);
+if (n3Units.length !== 81) errors.push(`단원 수 오류: ${n3Units.length}/81`);
 if (vocabularyReviewQuestions !== 42) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/42`);
-for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 373, reading: 12, listening: 12 })) {
+for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, reading: 12, listening: 12 })) {
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
 

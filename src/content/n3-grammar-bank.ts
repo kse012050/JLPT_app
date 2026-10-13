@@ -6,7 +6,7 @@ import { n3GrammarSupplement } from './n3-grammar-supplement';
 import type { ChoiceQuestion, GrammarEntry, N3Unit } from './n3';
 
 export type GrammarLevel = 'N3' | 'N4' | 'N5';
-export const grammarCounts = { N3: 182, N4: 98, N5: 81, total: 361 } as const;
+export const grammarCounts = { N3: 192, N4: 98, N5: 81, total: 371 } as const;
 
 const formationTerms: Record<string, string> = {
   'Verb-nai stem': '동사 ない형 어간',

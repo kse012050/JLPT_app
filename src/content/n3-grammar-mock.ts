@@ -1,4 +1,5 @@
 import type { ChoiceQuestion } from './n3';
+import { n3GrammarMocksExtended } from './n3-grammar-mock-extended';
 
 export type GrammarMock = { id: string; title: string; minutes: number; questions: readonly ChoiceQuestion[] };
 
@@ -58,4 +59,5 @@ export const n3GrammarMocks: readonly GrammarMock[] = [
       { kind: '글의 흐름', prompt: '山田さんは三年間大阪に住んでいたそうです。大阪の道に詳しい（　）。', choices: ['わけですね', 'わけがないですね', 'わけにはいきませんね', 'わけではありませんね'], answer: 'わけですね', explanation: '오사카에 살았다는 사실을 알고 길을 잘 아는 이유를 납득합니다.' },
     ],
   },
+  ...n3GrammarMocksExtended,
 ];
