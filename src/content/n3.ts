@@ -1,5 +1,6 @@
 import { n3VocabularyUnits } from './n3-vocabulary';
 import { n3GrammarUnits, prerequisiteGrammarUnits } from './n3-grammar-bank';
+import { n3ReadingUnits } from './n3-reading-bank';
 
 export type N3Area = 'vocabulary' | 'grammar' | 'reading' | 'listening';
 
@@ -222,12 +223,13 @@ export const n3Units: readonly N3Unit[] = [
   ...prerequisiteGrammarUnits,
   ...originalN3Units.filter((unit) => unit.area === 'grammar'),
   ...n3VocabularyUnits,
+  ...n3ReadingUnits,
 ];
 
 export const n3Areas: readonly { id: N3Area; title: string; description: string }[] = [
   { id: 'vocabulary', title: '문자·어휘', description: '한자 읽기, 문맥과 어휘' },
   { id: 'grammar', title: '문법', description: '문장에 맞는 표현과 연결' },
-  { id: 'reading', title: '독해', description: '안내문과 짧은 글의 핵심' },
+  { id: 'reading', title: '독해', description: '짧은 글·중간 길이 글·긴 글·정보 검색' },
   { id: 'listening', title: '청해', description: '일상 대화와 안내의 요점' },
 ];
 

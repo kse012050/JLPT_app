@@ -29,6 +29,7 @@ JLPT 운영 기관은 공식 어휘·한자·문법 목록을 공개하지 않�
 | 어휘 한국어 뜻·예문 | `src/content/reviewed-vocabulary-ko.json`, `src/content/openjlpt-reference-ko.json` | 어휘 뜻 2,963개 항목에 교정을 반영했다. 예문 번역은 검수된 27개 항목만 학습 화면에 표시한다. |
 | 어휘 학습 단원 | `src/content/n3-vocabulary-bank.ts`, `src/content/n3-vocabulary-quiz.ts` | 중복 제거 후 2,994개 어휘를 N3·N4·N5 단원에서 학습한다. |
 | 문법 한국어 설명·문제 | `src/content/n3-grammar-ko.ts`, `src/content/n3-grammar-supplement.ts`, `src/content/prerequisite-grammar-details.ts`, `src/content/n3-grammar-bank.ts`, `src/content/n3-grammar-practice.ts`, `src/content/n3-grammar-practice-extended.ts` | N3 192개·N4 98개·N5 81개를 단계별 단원에서 학습한다. 각 표현에 한국어 뜻·설명·대표 예문 번역·확인 문제를 제공하고, N3 유형별 연습 100문항을 별도로 제공한다. |
+| 독해 학습·모의고사 | `src/content/n3.ts`, `src/content/n3-reading-bank.ts`, `src/content/n3-reading-bank-extended.ts`, `src/content/n3-reading-mock.ts`, `src/content/n3-reading-mock-extended.ts`, `src/app/n3-reading-mock.tsx` | 기존 기초 지문 6개에 시험형 지문 32개를 더해 학습 단원 38개·100문항을 제공한다. 별도 지문으로 구성한 시간제한 모의고사는 5회·50문항이다. |
 | 시간제한 모의고사 | `src/content/n3-vocabulary-mock.ts`, `src/content/n3-grammar-mock.ts`, `src/content/n3-grammar-mock-extended.ts` | 문자·어휘 25문항씩 2회, 문법 20문항씩 4회. 모두 자체 작성 문항이며 시험과 동일한 문항 수·난도를 보장하지 않는다. |
 | 화면·학습 기록 | `src/app/n3-vocabulary-mock.tsx`, `src/app/n3-grammar-mock.tsx`, `src/storage/n3-progress.ts` | 풀이 중 정답을 숨기고 시간 종료 또는 제출 후 해설을 표시한다. 최고 점수는 기기 로컬 저장소에 남는다. |
 | 데이터 검사 | `scripts/validate-n3-content.cjs` | 항목 수·중복·보기 4개·정답 존재·유형 분포 등을 검사한다. 일본어 자연스러움과 시험 난도는 자동으로 보증하지 못한다. |
@@ -95,6 +96,10 @@ JLPT 운영 기관은 공식 어휘·한자·문법 목록을 공개하지 않�
 
 ## 독해 데이터 작업에 적용
 
+- 현재 학습 단원은 38지문·100문항이며, 그중 새로 작성한 시험형 자료는 짧은 글·중간 길이 글·긴 글·정보 검색이 각 8지문이다. 별도 모의고사 5회는 회차마다 네 유형을 한 지문씩 포함하며 총 50문항이다. 학습 단원과 모의고사 사이에 같은 지문·질문을 재사용하지 않는다.
+- [JLPT N3 문제 유형 안내](https://www.jlpt.jp/e/guideline/pdf/n3_e.pdf?mode=pc)의 대략적인 지문 길이(짧은 글 150~200자, 중간 길이 글 350자, 긴 글 550자, 정보 검색 600자)를 작성 기준으로 삼는다. 추가한 시험형 자료는 짧은 글 최소 150자, 중간 길이 글 최소 330자, 긴 글 최소 500자, 정보 검색 최소 580자 기준으로 검사한다. 기존 기초 지문 6개는 이 길이 기준을 적용한 자료로 계산하지 않는다.
+- 사실 찾기만 반복하지 않고 변경 전후, 원인과 결과, 필자의 주장, 조건을 두세 개 결합한 정보 검색을 섞는다. 한국어 해설에는 지문의 어느 조건과 문장이 정답 근거인지 적는다.
+- 모의고사에서는 지문과 선택지를 제출 전까지 계속 볼 수 있고 정답은 숨긴다. 25분은 앱의 독해 단독 연습 시간이며 공식 문법·독해 통합 70분 시험의 문항 수나 점수 체계와 같지 않다.
 - N3에서 다루는 짧은 글·중간 길이 글·긴 글·정보 검색 자료를 고르게 제공한다. 안내문, 이메일, 설명문 등 실제 읽기 상황을 포함한다.
 - 지문은 일본어 원문, 출처 또는 자체 작성 여부, 길이·난도, 핵심 어휘·문법, 한국어 해설을 함께 관리한다. 필요한 경우 문단별 한국어 설명을 제공하되 문제를 풀기 전에 정답을 노출하지 않는다.
 - 질문은 핵심 내용, 이유·관계, 글쓴이의 의도, 필요한 정보 찾기를 다루고, 오답 선택지가 왜 틀렸는지도 한국어로 설명한다.

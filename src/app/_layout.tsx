@@ -24,6 +24,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="vocabulary" />
       <Stack.Screen name="n3-study" />
+      <Stack.Screen name="n3-reading-mock" />
       <Stack.Screen name="n3-kanji-drill" />
       <Stack.Screen name="n3-reference" />
       <Stack.Screen name="n3-vocabulary-bank" />
