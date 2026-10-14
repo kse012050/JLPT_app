@@ -26,6 +26,8 @@ const { grammarFocus, grammarReading, grammarSentenceReading } = loadTsModule(pa
 const { n3GrammarPractice } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-practice.ts'));
 const { n3GrammarMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-mock.ts'));
 const { n3ReadingUnits } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-bank.ts'));
+const { n3ListeningUnits } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-bank.ts'));
+const { n3ListeningMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-mock.ts'));
 const { n3ReadingMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-mock.ts'));
 const { n3VocabularyMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-mock.ts'));
 const { bankByLevel, bankCounts } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-bank.ts'));
@@ -287,9 +289,42 @@ for (const unit of n3Units) {
   }
 }
 
-if (n3Units.length !== 113) errors.push(`단원 수 오류: ${n3Units.length}/113`);
+const listeningKinds = ['과제 이해', '요점 이해', '개요 이해', '발화 표현', '즉시 응답'];
+const listeningTranscripts = new Set();
+for (const unit of n3Units.filter((entry) => entry.area === 'listening')) {
+  if (!unit.transcript || listeningTranscripts.has(unit.transcript)) errors.push(`${unit.id}: 청해 대본 누락 또는 중복`);
+  listeningTranscripts.add(unit.transcript);
+  for (const question of unit.questions ?? []) {
+    if (question.kind && !listeningKinds.includes(question.kind)) errors.push(`${unit.id}: 알 수 없는 청해 유형`);
+    if (question.choices.some((choice) => /[가-힣]/u.test(choice))) errors.push(`${unit.id}: 청해 보기에 한국어가 포함되었습니다.`);
+  }
+}
+if (n3ListeningUnits.length !== 30) errors.push(`청해 추가 단원 수 오류: ${n3ListeningUnits.length}/30`);
+for (const kind of listeningKinds) {
+  if (n3ListeningUnits.filter((unit) => unit.questions?.[0]?.kind === kind).length !== 6) errors.push(`${kind}: 청해 유형 분포 오류`);
+}
+const listeningMockIds = new Set();
+const listeningMockPrompts = new Set();
+if (n3ListeningMocks.length !== 5) errors.push(`청해 모의고사 회차 수 오류: ${n3ListeningMocks.length}/5`);
+for (const mock of n3ListeningMocks) {
+  if (listeningMockIds.has(mock.id) || mock.minutes !== 10 || mock.items.length !== 5) errors.push(`${mock.id}: 청해 모의고사 구성 오류`);
+  listeningMockIds.add(mock.id);
+  for (const kind of listeningKinds) {
+    if (mock.items.filter((item) => item.kind === kind).length !== 1) errors.push(`${mock.id}: ${kind} 유형 누락`);
+  }
+  for (const item of mock.items) {
+    if (ids.has(item.id) || listeningTranscripts.has(item.transcript)) errors.push(`${item.id}: 청해 모의고사 ID 또는 대본 중복`);
+    ids.add(item.id);
+    listeningTranscripts.add(item.transcript);
+    if (listeningMockPrompts.has(item.question.prompt) && !['何と答えますか。', '何と言いますか。'].includes(item.question.prompt)) errors.push(`${item.id}: 청해 질문 중복`);
+    listeningMockPrompts.add(item.question.prompt);
+    if (item.question.choices.some((choice) => /[가-힣]/u.test(choice))) errors.push(`${item.id}: 청해 보기에 한국어가 포함되었습니다.`);
+    checkQuestion(item.question, `${mock.id}/${item.id}`);
+  }
+}
+if (n3Units.length !== 143) errors.push(`단원 수 오류: ${n3Units.length}/143`);
 if (vocabularyReviewQuestions !== 42) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/42`);
-for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, reading: 100, listening: 12 })) {
+for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, reading: 100, listening: 42 })) {
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
 
@@ -297,5 +332,5 @@ if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length}개 학습·대표 예문 한국어 번역·자체 작성 복습 12개·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항·모의고사 ${n3ReadingMocks.length}회, 청해 ${counts.listening}문항`);
+  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length}개 학습·대표 예문 한국어 번역·자체 작성 복습 12개·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항·모의고사 ${n3ReadingMocks.length}회, 청해 ${counts.listening}문항·모의고사 ${n3ListeningMocks.length}회`);
 }
