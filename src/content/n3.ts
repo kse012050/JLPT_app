@@ -1,7 +1,10 @@
 import { n3VocabularyUnits } from './n3-vocabulary';
 import { n3GrammarUnits, prerequisiteGrammarUnits } from './n3-grammar-bank';
 import { n3ReadingUnits } from './n3-reading-bank';
+import { n3ReadingApplication } from './n3-reading-application';
 import { n3ListeningUnits } from './n3-listening-bank';
+import { n3ListeningApplication } from './n3-listening-application';
+import { n3LanguageApplication } from './n3-language-application';
 
 export type N3Area = 'vocabulary' | 'grammar' | 'reading' | 'listening';
 
@@ -225,7 +228,10 @@ export const n3Units: readonly N3Unit[] = [
   ...originalN3Units.filter((unit) => unit.area === 'grammar'),
   ...n3VocabularyUnits,
   ...n3ReadingUnits,
+  ...n3ReadingApplication,
   ...n3ListeningUnits,
+  ...n3ListeningApplication,
+  ...n3LanguageApplication,
 ];
 
 export const n3Areas: readonly { id: N3Area; title: string; description: string }[] = [

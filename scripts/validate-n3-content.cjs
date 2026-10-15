@@ -26,7 +26,10 @@ const { grammarFocus, grammarReading, grammarSentenceReading } = loadTsModule(pa
 const { n3GrammarPractice } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-practice.ts'));
 const { n3GrammarMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-grammar-mock.ts'));
 const { n3ReadingUnits } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-bank.ts'));
+const { n3ReadingApplication } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-application.ts'));
 const { n3ListeningUnits } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-bank.ts'));
+const { n3ListeningApplication } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-application.ts'));
+const { n3LanguageApplication } = loadTsModule(path.join(__dirname, '../src/content/n3-language-application.ts'));
 const { n3ListeningMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-mock.ts'));
 const { n3ReadingMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-mock.ts'));
 const { n3VocabularyMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-mock.ts'));
@@ -193,6 +196,7 @@ for (const mock of n3GrammarMocks) {
   }
   for (const [index, question] of mock.questions.entries()) {
     checkQuestion(question, `${mock.id}/${index}`);
+    if (question.kind === '글의 흐름' && question.prompt.length < 180) errors.push(`${mock.id}/${index}: 글의 흐름 지문이 너무 짧습니다.`);
     if (mockPrompts.has(question.prompt)) errors.push(`${mock.id}/${index}: 중복 문제`);
     mockPrompts.add(question.prompt);
   }
@@ -274,6 +278,10 @@ for (const unit of n3Units) {
     for (const [index, question] of (unit.questions ?? []).entries()) checkQuestion(question, `${unit.id}/${index}`);
     vocabularyReviewQuestions += unit.questions?.length ?? 0;
   }
+  if (unit.area === 'vocabulary' && !unit.vocabulary) {
+    for (const [index, question] of (unit.questions ?? []).entries()) checkQuestion(question, `${unit.id}/${index}`);
+    vocabularyReviewQuestions += unit.questions?.length ?? 0;
+  }
   if (unit.grammar) {
     counts.grammar += unit.grammar.length;
     for (const [index, entry] of unit.grammar.entries()) {
@@ -281,6 +289,9 @@ for (const unit of n3Units) {
       checkQuestion(entry.question, `${unit.id}/${index}`);
     }
     for (const [index, question] of (unit.questions ?? []).entries()) checkQuestion(question, `${unit.id}/추가 문제 ${index}`);
+  }
+  if (unit.area === 'grammar' && !unit.grammar) {
+    for (const [index, question] of (unit.questions ?? []).entries()) checkQuestion(question, `${unit.id}/${index}`);
   }
   if (unit.passage || unit.transcript) {
     if (!unit.questions?.length) errors.push(`${unit.id}: 독해·청해 문제 누락`);
@@ -300,6 +311,7 @@ for (const unit of n3Units.filter((entry) => entry.area === 'listening')) {
   }
 }
 if (n3ListeningUnits.length !== 30) errors.push(`청해 추가 단원 수 오류: ${n3ListeningUnits.length}/30`);
+if (n3ListeningApplication.length !== 5 || n3ListeningApplication.some((unit) => (unit.questions?.length ?? 0) !== 2 || (unit.transcript?.length ?? 0) < 160)) errors.push('청해 응용 자료의 상황·질문 구성 오류');
 for (const kind of listeningKinds) {
   if (n3ListeningUnits.filter((unit) => unit.questions?.[0]?.kind === kind).length !== 6) errors.push(`${kind}: 청해 유형 분포 오류`);
 }
@@ -313,6 +325,7 @@ for (const mock of n3ListeningMocks) {
     if (mock.items.filter((item) => item.kind === kind).length !== 1) errors.push(`${mock.id}: ${kind} 유형 누락`);
   }
   for (const item of mock.items) {
+    if (['과제 이해', '요점 이해', '개요 이해'].includes(item.kind) && item.transcript.length < 90) errors.push(`${item.id}: 상황·요지 판단에 필요한 청해 대본이 너무 짧습니다.`);
     if (ids.has(item.id) || listeningTranscripts.has(item.transcript)) errors.push(`${item.id}: 청해 모의고사 ID 또는 대본 중복`);
     ids.add(item.id);
     listeningTranscripts.add(item.transcript);
@@ -322,9 +335,14 @@ for (const mock of n3ListeningMocks) {
     checkQuestion(item.question, `${mock.id}/${item.id}`);
   }
 }
-if (n3Units.length !== 143) errors.push(`단원 수 오류: ${n3Units.length}/143`);
-if (vocabularyReviewQuestions !== 42) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/42`);
-for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, reading: 100, listening: 42 })) {
+if (n3ReadingApplication.length !== 2 || n3ReadingApplication.some((unit) => (unit.passage?.length ?? 0) < 500 || (unit.questions?.length ?? 0) !== 3)) errors.push('독해 응용 지문 길이 또는 문항 구성 오류');
+for (const unit of n3ReadingApplication) {
+  if (unit.questions?.some((question) => question.choices.some((choice) => /[가-힣]/u.test(choice)))) errors.push(`${unit.id}: 독해 보기에 한국어가 포함되었습니다.`);
+}
+if (n3LanguageApplication.length !== 4 || n3LanguageApplication.some((unit) => (unit.questions?.length ?? 0) !== 4)) errors.push('어휘·문법 응용 단원 구성 오류');
+if (n3Units.length !== 154) errors.push(`단원 수 오류: ${n3Units.length}/154`);
+if (vocabularyReviewQuestions !== 50) errors.push(`어휘 유형별 문제 수 오류: ${vocabularyReviewQuestions}/50`);
+for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, reading: 106, listening: 52 })) {
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
 

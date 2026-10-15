@@ -1,10 +1,11 @@
 import type { ChoiceQuestion } from './n3';
 import { n3GrammarMocksExtended } from './n3-grammar-mock-extended';
+import { textGrammarByMock } from './n3-grammar-mock-texts';
 
 export type GrammarMock = { id: string; title: string; minutes: number; questions: readonly ChoiceQuestion[] };
 
 // 공식 문제를 복제하지 않은 자체 작성 문법 연습 모의고사. 20문항, 25분은 앱의 연습 기준이다.
-export const n3GrammarMocks: readonly GrammarMock[] = [
+const originalGrammarMocks: readonly GrammarMock[] = [
   {
     id: 'n3-grammar-mock-1',
     title: '문법 모의고사 1회',
@@ -13,7 +14,7 @@ export const n3GrammarMocks: readonly GrammarMock[] = [
       { kind: '문법 형식', prompt: '天気予報に（　）、午後から強い雨が降るそうだ。', choices: ['よると', 'よって', 'ついて', '対して'], answer: 'よると', explanation: '정보의 출처를 나타낼 때 「天気予報によると」라고 합니다.' },
       { kind: '문법 형식', prompt: '駅へ行く（　）、郵便局に寄ってもいいですか。', choices: ['ついでに', 'たびに', '最中に', 'うちに'], answer: 'ついでに', explanation: '역에 가는 기회에 다른 일도 함께 한다는 뜻입니다.' },
       { kind: '문법 형식', prompt: '彼は一度決めたら、最後までやる（　）。', choices: ['はずだ', 'せいだ', 'たびだ', 'ところだ'], answer: 'はずだ', explanation: '그의 성향을 근거로 끝까지 할 것이라고 예상합니다.' },
-      { kind: '문법 형식', prompt: 'この薬は食事の（　）飲んでください。', choices: ['後で', '後にして', '後から', '後まで'], answer: '後で', explanation: '식사 후에 약을 먹으라는 시간 표현입니다.' },
+      { kind: '문법 형식', prompt: '医者には安静にするように言われたが、今日中に提出しなければならない書類がある。少し熱がある（　）、病院から戻って仕事を続けた。', choices: ['にもかかわらず', 'ことから', 'うちに', 'たびに'], answer: 'にもかかわらず', explanation: '열이 있어 쉬어야 할 상황인데도 일을 계속했다는 역접입니다. 「〜にもかかわらず」가 앞뒤 내용을 연결합니다.' },
       { kind: '문법 형식', prompt: '玄関のドアを開けた（　）、猫が外へ飛び出した。', choices: ['とたんに', 'うちに', 'たびに', 'ために'], answer: 'とたんに', explanation: '문을 연 바로 그 순간 고양이가 갑자기 뛰어나갔습니다.' },
       { kind: '문법 형식', prompt: 'この仕事は経験がない人（　）難しいかもしれない。', choices: ['にとって', 'に対して', 'によって', 'について'], answer: 'にとって', explanation: '경험이 없는 사람의 입장에서 어렵다는 평가입니다.' },
       { kind: '문법 형식', prompt: '朝から何も食べていないので、お腹がすいて（　）。', choices: ['たまらない', 'しかない', 'かねない', 'わけではない'], answer: 'たまらない', explanation: '배고픔을 참기 어려울 만큼 강하게 느끼는 상태입니다.' },
@@ -39,7 +40,7 @@ export const n3GrammarMocks: readonly GrammarMock[] = [
     questions: [
       { kind: '문법 형식', prompt: 'この店では、商品を買う前に会員登録をする（　）。', choices: ['ことになっている', 'ことにしている', 'ようにしている', 'はずがない'], answer: 'ことになっている', explanation: '가게의 정해진 규칙을 말합니다.' },
       { kind: '문법 형식', prompt: '忙しくても、朝ご飯を食べる（　）。', choices: ['ようにしている', 'ようになっている', 'ことになっている', 'わけがない'], answer: 'ようにしている', explanation: '스스로 계속 실천하려는 습관을 말합니다.' },
-      { kind: '문법 형식', prompt: 'この町は人口が増える（　）。', choices: ['一方だ', '一方で', 'たびだ', 'うちだ'], answer: '一方だ', explanation: '인구 증가가 한 방향으로 계속되는 변화입니다.' },
+      { kind: '문법 형식', prompt: '新しい住宅が建ち、駅を利用する人は増える（　）だが、朝の電車の本数は十年前と変わっていない。', choices: ['一方', 'ほど', 'うち', 'ところ'], answer: '一方', explanation: '이용자가 계속 증가하는 추세를 「増える一方だ」로 나타냅니다. 뒤 문장은 운행 횟수가 그대로라는 대비입니다.' },
       { kind: '문법 형식', prompt: '先週の電話では元気だと言っていたから、彼は今も元気な（　）。', choices: ['はずだ', 'せいだ', 'うちだ', 'たびだ'], answer: 'はずだ', explanation: '지난주 통화 내용을 근거로 지금도 건강할 것이라고 예상합니다.' },
       { kind: '문법 형식', prompt: '駅の近くに住んでいる（　）、電車に乗り遅れた。', choices: ['くせに', 'おかげで', 'ついでに', 'ところで'], answer: 'くせに', explanation: '역 근처에 사는데도 늦었다는 비판적인 역접입니다.' },
       { kind: '문법 형식', prompt: '先生に聞いてみた（　）、すぐに答えてくれた。', choices: ['ところ', 'うちに', 'たびに', 'せいで'], answer: 'ところ', explanation: '물어보니 곧 답을 들었다는 결과를 이어 줍니다.' },
@@ -61,3 +62,8 @@ export const n3GrammarMocks: readonly GrammarMock[] = [
   },
   ...n3GrammarMocksExtended,
 ];
+
+export const n3GrammarMocks: readonly GrammarMock[] = originalGrammarMocks.map((mock) => {
+  let textIndex = 0;
+  return { ...mock, questions: mock.questions.map((question) => question.kind === '글의 흐름' ? textGrammarByMock[mock.id][textIndex++] : question) };
+});
