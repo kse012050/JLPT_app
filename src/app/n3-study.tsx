@@ -1,4 +1,3 @@
-import * as Speech from 'expo-speech';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -17,6 +16,7 @@ import kanjiReference from '@/content/n3-kanji-reference.json';
 import { bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
 import { batchCount, resultKey, wordsForBatch } from '@/content/n3-vocabulary-quiz';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { playListeningTranscript, stopListeningPlayback } from '@/utils/listening-playback';
 
 type Stage = 'units' | 'learn' | 'quiz' | 'result';
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', greenPale: '#E5F8EF', line: '#ECE9F0' };
@@ -83,10 +83,10 @@ export default function N3StudyScreen() {
     getN3Results().then((saved) => { if (active) setResults(saved); }).catch(() => { if (active) setSaveError(true); });
     return () => { active = false; };
   }, []));
-  useEffect(() => () => { void Speech.stop(); }, []);
+  useEffect(() => () => { void stopListeningPlayback(); }, []);
 
   function start(next: N3Unit) {
-    void Speech.stop();
+    void stopListeningPlayback();
     setUnit(next);
     setIndex(0);
     setSelected(null);
@@ -97,13 +97,14 @@ export default function N3StudyScreen() {
   }
 
   function back() {
-    void Speech.stop();
+    void stopListeningPlayback();
     if (stage === 'units') router.back();
     else { setStage('units'); setUnit(null); }
   }
 
   async function nextQuestion() {
     if (!unit || !current || selected === null) return;
+    void stopListeningPlayback();
     const nextCorrect = correct + Number(selected === current.answer);
     setCorrect(nextCorrect);
     setSelected(null);
@@ -117,7 +118,7 @@ export default function N3StudyScreen() {
   function playAudio() {
     if (!unit?.transcript) return;
     setSpeechError(false);
-    void Speech.stop().then(() => Speech.speak(unit.transcript!, { language: 'ja-JP', rate: 0.9, onError: () => setSpeechError(true) })).catch(() => setSpeechError(true));
+    void playListeningTranscript(unit.transcript, () => setSpeechError(true)).catch(() => setSpeechError(true));
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
@@ -168,7 +169,7 @@ export default function N3StudyScreen() {
         {stage === 'quiz' && unit && current ? <>
           <View style={s.stepRow}><Text style={s.stepLabel}>{unit.title} · 확인 문제</Text><Text style={s.stepCount}>{index + 1} / {questions.length}</Text></View><View style={s.track}><View style={[s.trackFill, { width: `${((index + 1) / questions.length) * 100}%` }]} /></View>
           {unit.passage ? <View style={s.sourceCard}><Text style={s.cardLabel}>지문</Text><Text style={s.sourceText}>{unit.passage}</Text></View> : null}
-          {unit.transcript ? <View style={s.sourceCard}><Text style={s.cardLabel}>음성 듣기</Text><Text style={s.audioIntro}>일본어 음성을 듣고 답을 고르세요. 다시 들을 수 있습니다.</Text><Pressable onPress={playAudio} style={s.audioButton} accessibilityRole="button"><Text style={s.audioButtonText}>▶  일본어 듣기</Text></Pressable>{speechError ? <Text style={s.error}>일본어 음성을 재생하지 못했습니다. 기기의 일본어 음성 설정을 확인해 주세요.</Text> : null}{selected !== null || showTranscript ? <><Text style={s.transcriptLabel}>대본</Text><Text style={s.sourceText}>{unit.transcript}</Text></> : null}</View> : null}
+          {unit.transcript ? <View style={s.sourceCard}><Text style={s.cardLabel}>음성 듣기</Text><Text style={s.audioIntro}>대화는 화자별로 나누어 재생합니다. 듣고 답을 고르세요.</Text><Pressable onPress={playAudio} style={s.audioButton} accessibilityRole="button"><Text style={s.audioButtonText}>▶  일본어 듣기</Text></Pressable>{speechError ? <Text style={s.error}>일본어 음성을 재생하지 못했습니다. 기기의 일본어 음성 설정을 확인해 주세요.</Text> : null}{selected !== null || showTranscript ? <><Text style={s.transcriptLabel}>대본</Text><Text style={s.sourceText}>{unit.transcript}</Text></> : null}</View> : null}
           <View style={s.questionCard}><Text style={s.questionType}>{current.kind ?? '확인 문제'} · {index + 1}</Text><Text style={s.questionText}>{current.prompt}</Text></View>
           <View style={s.choices}>{questionChoices(current).map((choice) => <Pressable key={choice} disabled={selected !== null} onPress={() => setSelected(choice)} style={[s.choice, selected !== null && choice === current.answer && s.choiceCorrect, selected === choice && choice !== current.answer && s.choiceWrong]} accessibilityRole="button"><Text style={s.choiceText}>{choice}</Text></Pressable>)}</View>
           {selected !== null ? <View style={[s.feedback, selected === current.answer ? s.feedbackCorrect : s.feedbackWrong]}><Text style={s.feedbackTitle}>{selected === current.answer ? '정답이에요!' : `정답: ${current.answer}`}</Text><Text style={s.feedbackDetail}>{current.explanation}</Text></View> : null}

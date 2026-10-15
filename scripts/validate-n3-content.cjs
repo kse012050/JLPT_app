@@ -31,6 +31,7 @@ const { n3ListeningUnits } = loadTsModule(path.join(__dirname, '../src/content/n
 const { n3ListeningApplication } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-application.ts'));
 const { n3LanguageApplication } = loadTsModule(path.join(__dirname, '../src/content/n3-language-application.ts'));
 const { n3ListeningMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-listening-mock.ts'));
+const { splitListeningTranscript } = loadTsModule(path.join(__dirname, '../src/content/listening-speakers.ts'));
 const { n3ReadingMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-reading-mock.ts'));
 const { n3VocabularyMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-mock.ts'));
 const { bankByLevel, bankCounts } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-bank.ts'));
@@ -334,6 +335,12 @@ for (const mock of n3ListeningMocks) {
     if (item.question.choices.some((choice) => /[가-힣]/u.test(choice))) errors.push(`${item.id}: 청해 보기에 한국어가 포함되었습니다.`);
     checkQuestion(item.question, `${mock.id}/${item.id}`);
   }
+}
+for (const transcript of listeningTranscripts) {
+  const parts = splitListeningTranscript(transcript);
+  if (!parts.length || parts.some((part) => !part.text || /(?:電話の相手|知らない人|配達員|先生|生徒|友達|同僚|店員|女|男)：/u.test(part.text))) errors.push('청해 대본 화자 분리 오류');
+  const speakerMarks = transcript.match(/(?:電話の相手|知らない人|配達員|先生|生徒|友達|同僚|店員|女|男)：/gu) ?? [];
+  if (speakerMarks.length > 1 && parts.length < speakerMarks.length) errors.push('청해 대본의 화자 교대가 누락되었습니다.');
 }
 if (n3ReadingApplication.length !== 2 || n3ReadingApplication.some((unit) => (unit.passage?.length ?? 0) < 500 || (unit.questions?.length ?? 0) !== 3)) errors.push('독해 응용 지문 길이 또는 문항 구성 오류');
 for (const unit of n3ReadingApplication) {

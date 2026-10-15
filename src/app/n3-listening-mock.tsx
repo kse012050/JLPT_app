@@ -1,4 +1,3 @@
-import * as Speech from 'expo-speech';
 import { Link, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +7,7 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { n3ListeningMocks } from '@/content/n3-listening-mock';
 import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { playListeningTranscript, stopListeningPlayback } from '@/utils/listening-playback';
 
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', line: '#ECE9F0' };
 const fonts = { body: 'NotoSansKR_400Regular', medium: 'NotoSansKR_500Medium', semi: 'NotoSansKR_600SemiBold', bold: 'NotoSansKR_700Bold', jp: 'NotoSansJP_400Regular', number: 'PlusJakartaSans_700Bold' };
@@ -32,7 +32,7 @@ export default function N3ListeningMockScreen() {
   const score = mock?.items.reduce((total, item, index) => total + Number(answers[index] === item.question.answer), 0) ?? 0;
 
   useEffect(() => { getN3Results().then(setBest).catch(() => setSaveError(true)); }, []);
-  useEffect(() => () => { void Speech.stop(); }, []);
+  useEffect(() => () => { void stopListeningPlayback(); }, []);
   useEffect(() => {
     if (!mock || submitted || deadline !== 0) return;
     const timeout = setTimeout(() => setDeadline(Date.now() + mock.minutes * 60_000), 0);
@@ -51,12 +51,12 @@ export default function N3ListeningMockScreen() {
   }, [deadline, mock, submitted]);
   useEffect(() => {
     if (!mock || !submitted) return;
-    void Speech.stop();
+    void stopListeningPlayback();
     saveN3Result(mock.id, score, mock.items.length).then(setBest).catch(() => setSaveError(true));
   }, [mock, score, submitted]);
 
   function start(index: number) {
-    void Speech.stop();
+    void stopListeningPlayback();
     const next = n3ListeningMocks[index];
     setMockIndex(index);
     setQuestionIndex(0);
@@ -70,14 +70,14 @@ export default function N3ListeningMockScreen() {
   }
 
   function navigate(index: number) {
-    void Speech.stop();
+    void stopListeningPlayback();
     setSpeechError(false);
     setQuestionIndex(index);
     scroll.current?.scrollTo({ y: 0, animated: true });
   }
 
   function back() {
-    void Speech.stop();
+    void stopListeningPlayback();
     if (mockIndex === null) router.back();
     else { setMockIndex(null); setSubmitted(false); setDeadline(0); }
   }
@@ -85,7 +85,7 @@ export default function N3ListeningMockScreen() {
   function play() {
     if (!current) return;
     setSpeechError(false);
-    void Speech.stop().then(() => Speech.speak(current.transcript, { language: 'ja-JP', rate: 0.9, onError: () => setSpeechError(true) })).catch(() => setSpeechError(true));
+    void playListeningTranscript(current.transcript, () => setSpeechError(true)).catch(() => setSpeechError(true));
   }
 
   return <SafeAreaView style={s.screen} edges={['top', 'bottom']}>
@@ -93,7 +93,7 @@ export default function N3ListeningMockScreen() {
     <ScrollView ref={scroll} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
       <View style={s.content}>
         {!mock ? <>
-          <View style={s.hero}><Text style={s.eyebrow}>시간제한 청해 연습</Text><Text style={s.title}>청해 모의고사</Text><Text style={s.body}>회차마다 과제 이해·요점 이해·개요 이해·발화 표현·즉시 응답을 한 문제씩 듣고 풉니다. 제출 후 대본과 해설을 확인할 수 있습니다.</Text><Text style={s.notice}>음성은 기기의 일본어 음성 합성입니다. 회차당 5문항·10분은 앱 연습 기준이며 실제 N3 청해 시험과 분량·음질·점수 체계가 다릅니다.</Text></View>
+          <View style={s.hero}><Text style={s.eyebrow}>시간제한 청해 연습</Text><Text style={s.title}>청해 모의고사</Text><Text style={s.body}>회차마다 과제 이해·요점 이해·개요 이해·발화 표현·즉시 응답을 한 문제씩 듣고 풉니다. 제출 후 대본과 해설을 확인할 수 있습니다.</Text><Text style={s.notice}>대화는 화자별로 나누어 기기의 일본어 음성 합성으로 재생합니다. 목소리 차이는 기기 설정에 따라 달라집니다. 회차당 5문항·10분은 앱 연습 기준이며 실제 N3 청해 시험의 음질·분량과 다릅니다.</Text></View>
           {n3ListeningMocks.map((item, index) => <Pressable key={item.id} onPress={() => start(index)} style={s.card} accessibilityRole="button" accessibilityLabel={`${item.title} 시작`}><Text style={s.cardTitle}>{item.title} ›</Text><Text style={s.body}>{item.items.length}문항 · {item.minutes}분</Text>{best[item.id] ? <Text style={s.best}>최고 {best[item.id].score}/{best[item.id].total}점</Text> : null}</Pressable>)}
           <View style={s.card}><Text style={s.cardTitle}>JLPT 공식 청해 자료</Text><Text style={s.body}>실제 음성과 문제 형식은 JLPT 공식 자료에서 확인하세요. 인터넷 연결이 필요합니다.</Text><Link href={officialUrl} target="_blank" style={s.officialLink}>JLPT 공식 자료 열기 ↗</Link></View>
         </> : submitted ? <>
