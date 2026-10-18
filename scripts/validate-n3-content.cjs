@@ -37,6 +37,8 @@ const { n3VocabularyMocks } = loadTsModule(path.join(__dirname, '../src/content/
 const { bankByLevel, bankCounts } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-bank.ts'));
 const { formatKoreanMeanings } = loadTsModule(path.join(__dirname, '../src/content/korean-meaning.ts'));
 const { questionsForBatch, batchCount } = loadTsModule(path.join(__dirname, '../src/content/n3-vocabulary-quiz.ts'));
+const { n3FullMocks } = loadTsModule(path.join(__dirname, '../src/content/n3-full-mock.ts'));
+const { questionChoices } = loadTsModule(path.join(__dirname, '../src/content/question-choices.ts'));
 
 const errors = [];
 const ids = new Set();
@@ -353,9 +355,57 @@ for (const [area, expected] of Object.entries({ vocabulary: 144, grammar: 383, r
   if (counts[area] !== expected) errors.push(`${area} 항목 수 오류: ${counts[area]}/${expected}`);
 }
 
+if (n3FullMocks.length !== 3 || n3FullMocks.filter((mock) => mock.diagnostic).length !== 1) errors.push(`종합 모의고사 회차 수 또는 진단 회차 오류: ${n3FullMocks.length}/3`);
+const fullMockPrompts = new Set();
+const previousMockPrompts = new Set([
+  ...n3VocabularyMocks.flatMap((mock) => mock.questions.map((question) => question.prompt)),
+  ...n3GrammarMocks.flatMap((mock) => mock.questions.map((question) => question.prompt)),
+  ...n3ReadingMocks.flatMap((mock) => mock.passages.flatMap((passage) => (passage.questions ?? []).map((question) => question.prompt))),
+]);
+const previousListeningTranscripts = new Set(n3ListeningMocks.flatMap((mock) => mock.items.map((item) => item.transcript)));
+const previousReadingPassages = new Set(n3ReadingMocks.flatMap((mock) => mock.passages.map((passage) => passage.passage)));
+for (const mock of n3FullMocks) {
+  const readingQuestions = mock.reading.flatMap((passage) => passage.questions ?? []);
+  if (mock.vocabulary.length !== 35 || mock.grammar.length !== 23 || readingQuestions.length !== 16 || mock.listening.length !== 28) {
+    errors.push(`${mock.id}: 종합 모의고사 문항 수 오류`);
+  }
+  for (const [kind, expected] of Object.entries({ '한자 읽기': 8, '표기': 6, '문맥 속 어휘': 11, '바꿔 말하기': 5, '용법': 5 })) {
+    if (mock.vocabulary.filter((question) => question.kind === kind).length !== expected) errors.push(`${mock.id}: ${kind} 분포 오류`);
+  }
+  for (const [kind, expected] of Object.entries({ '문법 형식': 13, '문장 배열': 5, '글의 흐름': 5 })) {
+    if (mock.grammar.filter((question) => question.kind === kind).length !== expected) errors.push(`${mock.id}: ${kind} 분포 오류`);
+  }
+  for (const [kind, expected] of Object.entries({ '과제 이해': 6, '요점 이해': 6, '개요 이해': 3, '발화 표현': 4, '즉시 응답': 9 })) {
+    if (mock.listening.filter((item) => item.kind === kind).length !== expected) errors.push(`${mock.id}: 청해 ${kind} 분포 오류`);
+  }
+  for (const [section, questions] of [['어휘', mock.vocabulary], ['문법', mock.grammar], ['독해', readingQuestions], ['청해', mock.listening.map((item) => item.question)]]) {
+    for (const [index, question] of questions.entries()) {
+      checkQuestion(question, `${mock.id}/${section}/${index}`);
+      const questionKey = section === '청해' ? `${mock.listening[index].transcript}\u0000${question.prompt}` : question.prompt;
+      if (fullMockPrompts.has(questionKey)) errors.push(`${mock.id}/${section}/${index}: 종합 모의고사 간 중복 문제`);
+      if (mock.diagnostic && previousMockPrompts.has(question.prompt)) errors.push(`${mock.id}/${section}/${index}: 영역별 모의고사 문제 재사용`);
+      fullMockPrompts.add(questionKey);
+      if (question.choices.some((choice) => /[가-힣]/u.test(choice))) errors.push(`${mock.id}/${section}/${index}: 보기에 한국어 포함`);
+    }
+  }
+  if (new Set(mock.listening.map((item) => item.id)).size !== mock.listening.length) errors.push(`${mock.id}: 청해 ID 중복`);
+  if (mock.diagnostic && mock.listening.some((item) => previousListeningTranscripts.has(item.transcript))) errors.push(`${mock.id}: 영역별 청해 지문 재사용`);
+  if (mock.diagnostic && mock.reading.some((passage) => previousReadingPassages.has(passage.passage))) errors.push(`${mock.id}: 영역별 독해 지문 재사용`);
+  if (mock.diagnostic) {
+    for (const [description, expected] of Object.entries({ '짧은 글': 2, '중간 길이 글': 2, '긴 글': 1, '정보 검색': 1 })) {
+      if (mock.reading.filter((passage) => passage.description === description).length !== expected) errors.push(`${mock.id}: 독해 ${description} 구성 오류`);
+    }
+    if (!mock.reading.some((passage) => passage.description === '긴 글' && passage.passage.length >= 450)) errors.push(`${mock.id}: 긴 글 분량 부족`);
+    for (const questions of [mock.vocabulary, mock.grammar, readingQuestions, mock.listening.map((item) => item.question)]) {
+      const answerPositions = questions.map((question) => questionChoices(question).indexOf(question.answer));
+      if (Math.max(...[0, 1, 2, 3].map((position) => answerPositions.filter((item) => item === position).length)) > questions.length * 0.5) errors.push(`${mock.id}: 정답 위치 편중`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length}개 학습·대표 예문 한국어 번역·자체 작성 복습 12개·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항·모의고사 ${n3ReadingMocks.length}회, 청해 ${counts.listening}문항·모의고사 ${n3ListeningMocks.length}회`);
+  console.log(`N3 콘텐츠 검증 완료: 통합 어휘 ${bankCounts.total}개(N3 ${bankCounts.N3}, N4 ${bankCounts.N4}, N5 ${bankCounts.N5}), 원본 어휘 뜻 ${reviewedKeys.size}개 검수 반영, 어휘 예문 ${Object.keys(reviewedVocabulary.examples).length}개 항목 검수 반영, 뜻·읽기·표기 문제 보기 정상; 문맥·유의 표현·용법 ${vocabularyReviewQuestions}문항, 문법 ${n3GrammarEntries.length + prerequisiteGrammarEntries.N4.length + prerequisiteGrammarEntries.N5.length}개 학습·대표 예문 한국어 번역·자체 작성 복습 12개·문법 유형별 문제 ${n3GrammarPractice.length}문항, 독해 ${counts.reading}문항·모의고사 ${n3ReadingMocks.length}회, 청해 ${counts.listening}문항·모의고사 ${n3ListeningMocks.length}회, 종합 모의고사 ${n3FullMocks.length}회(회당 102문항)`);
 }
