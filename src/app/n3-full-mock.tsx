@@ -8,6 +8,7 @@ import type { ChoiceQuestion } from '@/content/n3';
 import { n3FullMocks } from '@/content/n3-full-mock';
 import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts, type ReviewArea } from '@/storage/wrong-questions';
 import { playListeningTranscript, stopListeningPlayback } from '@/utils/listening-playback';
 
 type Phase = 'select' | 'vocabulary' | 'knowledge' | 'listening' | 'result';
@@ -94,6 +95,15 @@ export default function N3FullMockScreen() {
   useEffect(() => {
     if (phase !== 'result' || !mock) return;
     saveN3Result(mock.id, totalScore, totalQuestions).then(setBest).catch(() => setSaveError(true));
+    saveQuestionAttempts((['vocabulary', 'knowledge', 'listening'] as const).flatMap((section) =>
+      items[section].flatMap((item, itemIndex) => {
+        const selected = answers[section][itemIndex];
+        if (selected === null) return [];
+        const area: ReviewArea = section === 'knowledge'
+          ? (itemIndex < mock.grammar.length ? 'grammar' : 'reading') : section;
+        return [{ question: reviewQuestion(`${mock.id}:${section}:${item.id}`, area, mock.title, item.question,
+          { passage: item.passage, transcript: item.transcript }), selected }];
+      }))).catch(() => setSaveError(true));
     // 점수는 결과 화면에 도달할 때 한 번만 저장한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, mock]);

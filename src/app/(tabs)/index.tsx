@@ -1,13 +1,14 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type AndroidSymbol, type SFSymbol } from 'expo-symbols';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExamCalendarModal } from '@/components/exam-calendar-modal';
 import { KanaChartModal } from '@/components/kana-chart-modal';
 import { registrationStatus } from '@/constants/exam-schedule';
+import { getWrongQuestions, type WrongQuestion } from '@/storage/wrong-questions';
 
 const color = {
   background: '#FAF9F6', surface: '#FFFFFF', ink: '#252622', muted: '#666963',
@@ -141,14 +142,20 @@ function LessonCard({ wide }: { wide: boolean }) {
   </Card>;
 }
 
-function FlashCard({ title, meaning, label, detail, mobile = false }: { title: string; meaning: string; label: string; detail?: string; mobile?: boolean }) {
-  return <Pressable style={[styles.flashCard, mobile && styles.mobileFlashCard]} onPress={() => router.push('/review')} accessibilityRole="button"><View style={styles.between}><Text style={[styles.flashLabel, mobile && styles.mobileFlashLabel, label === '3일차 복습' && styles.flashLabelGreen]}>{label}</Text>{mobile ? <Icon name={icons.review} tint="#887274" size={14} /> : null}</View><Text style={[styles.flashTitle, mobile && styles.mobileFlashTitle]}>{title}</Text><Text style={[styles.flashMeaning, mobile && styles.mobileFlashMeaning]}>{meaning}</Text>{detail ? <Text style={styles.flashDetail}>{detail}</Text> : null}</Pressable>;
-}
-
 function ReviewCard({ wide }: { wide: boolean }) {
-  const body = <><View style={[styles.reviewAlert, wide && styles.reviewAlertWide]}>{wide ? null : <Icon name={icons.info} tint="#BA1A1A" size={16} />}<Text style={[styles.reviewAlertText, wide && styles.reviewAlertTextWide]}>{wide ? '망각 방지 골든타임! 3일 전 학습한 어휘를 지금 3분간 복습해 보세요.' : '어제 틀린 4문항이 포함되어 있습니다. 집중 점검하세요!'}</Text></View><View style={styles.flashGrid}><FlashCard title="雨が降る" meaning="비가 내리다" label={wide ? '단어 · 3회차' : '오답 복습'} detail={wide ? '예문: 午後から雨が降る予報だ。' : undefined} mobile={!wide} /><FlashCard title="〜にしては" meaning={wide ? '~치고는, ~에 비해서' : '~에 비해서'} label={wide ? '문법 · 1회차' : '3일차 복습'} detail={wide ? '예문: 初めて作った料理にしてはおいしい。' : undefined} mobile={!wide} /></View><Pressable style={[styles.secondaryButton, wide && styles.secondaryButtonWide]} onPress={() => router.push('/review')} accessibilityRole="button"><Icon name={icons.review} tint={color.coral} size={17} /><Text style={styles.secondaryButtonText}>12개 표현 3분 쾌속 플래시카드 시작</Text></Pressable></>;
-  if (wide) return <Card><SectionTitle title="오늘의 복습 (망각곡선 최적 주기)" detail="복습 대상 12개" />{body}</Card>;
-  return <View><View style={styles.sectionHeading}><View style={styles.reviewMobileHeading}><Text style={styles.sectionTitle}>오늘의 복습</Text><Text style={styles.reviewCount}>12</Text></View><Text style={styles.reviewMobileDetail}>망각곡선 주기 도래</Text></View><Card style={styles.mobileReviewCard}>{body}</Card></View>;
+  const [questions, setQuestions] = useState<WrongQuestion[]>([]);
+  useFocusEffect(useCallback(() => {
+    let mounted = true;
+    getWrongQuestions().then((items) => { if (mounted) setQuestions(items); }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, []));
+  const body = <>
+    <Text style={styles.reviewAlertText}>{questions.length ? `${questions.length}문제가 복습을 기다리고 있어요. 다시 맞히면 목록에서 빠집니다.` : '아직 틀린 문제가 없어요. 학습 문제를 풀면 오답이 여기에 모입니다.'}</Text>
+    {questions.slice(0, 2).map((item) => <Pressable key={item.id} style={[styles.flashCard, !wide && styles.mobileFlashCard]} onPress={() => router.push('/review')} accessibilityRole="button"><Text style={styles.flashLabel}>{item.source} · {item.kind}</Text><Text style={[styles.flashTitle, !wide && styles.mobileFlashTitle]} numberOfLines={2}>{item.prompt}</Text></Pressable>)}
+    <Pressable style={[styles.secondaryButton, wide && styles.secondaryButtonWide]} onPress={() => router.push('/review')} accessibilityRole="button"><Icon name={icons.review} tint={color.coral} size={17} /><Text style={styles.secondaryButtonText}>복습 노트에서 다시 풀기</Text></Pressable>
+  </>;
+  if (wide) return <Card><SectionTitle title="오답 복습" detail={`${questions.length}문제 대기`} />{body}</Card>;
+  return <View><View style={styles.sectionHeading}><View style={styles.reviewMobileHeading}><Text style={styles.sectionTitle}>오답 복습</Text><Text style={styles.reviewCount}>{questions.length}</Text></View></View><Card style={styles.mobileReviewCard}>{body}</Card></View>;
 }
 
 const roadmap = [

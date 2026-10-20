@@ -16,6 +16,7 @@ import kanjiReference from '@/content/n3-kanji-reference.json';
 import { bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
 import { batchCount, resultKey, wordsForBatch } from '@/content/n3-vocabulary-quiz';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 import { playListeningTranscript, stopListeningPlayback } from '@/utils/listening-playback';
 
 type Stage = 'units' | 'learn' | 'quiz' | 'result';
@@ -105,6 +106,12 @@ export default function N3StudyScreen() {
   async function nextQuestion() {
     if (!unit || !current || selected === null) return;
     void stopListeningPlayback();
+    try {
+      await saveQuestionAttempts([{
+        question: reviewQuestion(`${unit.id}:${index}`, area, unit.title, current, { passage: unit.passage, transcript: unit.transcript }),
+        selected,
+      }]);
+    } catch { setSaveError(true); }
     const nextCorrect = correct + Number(selected === current.answer);
     setCorrect(nextCorrect);
     setSelected(null);

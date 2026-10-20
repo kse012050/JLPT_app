@@ -7,6 +7,7 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { n3GrammarMocks } from '@/content/n3-grammar-mock';
 import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 
 const officialUrl = 'https://www.jlpt.jp/e/samples/sampleindex.html';
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', greenPale: '#E5F8EF', line: '#ECE9F0' };
@@ -56,7 +57,10 @@ export default function N3GrammarMockScreen() {
   useEffect(() => {
     if (!mock || !submitted) return;
     saveN3Result(mock.id, score, mock.questions.length).then(setBest).catch(() => setSaveError(true));
-  }, [mock, score, submitted]);
+    saveQuestionAttempts(mock.questions.flatMap((question, index) => answers[index] === null ? [] : [{
+      question: reviewQuestion(`${mock.id}:${index}`, 'grammar', mock.title, question), selected: answers[index]!,
+    }])).catch(() => setSaveError(true));
+  }, [answers, mock, score, submitted]);
 
   function start(index: number) {
     const next = n3GrammarMocks[index];

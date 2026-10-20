@@ -1,5 +1,5 @@
 import { Link, router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,6 +7,7 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { n3ReadingMocks } from '@/content/n3-reading-mock';
 import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 
 const officialUrl = 'https://www.jlpt.jp/e/samples/sampleindex.html';
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', line: '#ECE9F0' };
@@ -28,7 +29,8 @@ export default function N3ReadingMockScreen() {
   const [saveError, setSaveError] = useState(false);
 
   const mock = mockIndex === null ? null : n3ReadingMocks[mockIndex];
-  const items = mock?.passages.flatMap((passage) => (passage.questions ?? []).map((question) => ({ passage, question }))) ?? [];
+  const items = useMemo(() => mock?.passages.flatMap((passage) =>
+    (passage.questions ?? []).map((question) => ({ passage, question }))) ?? [], [mock]);
   const current = items[questionIndex];
   const answered = answers.filter((answer) => answer !== null).length;
   const score = items.reduce((total, item, index) => total + Number(answers[index] === item.question.answer), 0);
@@ -53,7 +55,11 @@ export default function N3ReadingMockScreen() {
   useEffect(() => {
     if (!mock || !submitted) return;
     saveN3Result(mock.id, score, items.length).then(setBest).catch(() => setSaveError(true));
-  }, [mock, score, submitted, items.length]);
+    saveQuestionAttempts(items.flatMap((item, index) => answers[index] === null ? [] : [{
+      question: reviewQuestion(`${mock.id}:${index}`, 'reading', mock.title, item.question, { passage: item.passage.passage }),
+      selected: answers[index]!,
+    }])).catch(() => setSaveError(true));
+  }, [answers, items, mock, score, submitted]);
 
   function start(index: number) {
     const next = n3ReadingMocks[index];

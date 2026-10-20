@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { n5VocabularyUnits, type VocabularyUnit } from '@/content/vocabulary';
 import { getCompletedVocabularyUnits, saveCompletedVocabularyUnit } from '@/storage/vocabulary-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 
 type Stage = 'units' | 'learn' | 'quiz' | 'result';
 
@@ -45,6 +46,17 @@ export default function VocabularyScreen() {
     if (!unit || answer === null) return;
     const word = unit.words[index];
     const expected = index % 2 === 0 ? word.meaning : word.reading;
+    const allChoices = unit.words.map((item) => index % 2 === 0 ? item.meaning : item.reading);
+    const offset = [2, 1, 3, 2][index] ?? 0;
+    try {
+      await saveQuestionAttempts([{
+        question: reviewQuestion(`${unit.id}:${word.id}:${index % 2}`, 'vocabulary', `N5 ${unit.title}`, {
+          kind: index % 2 === 0 ? '뜻' : '읽기',
+          prompt: word.written, choices: [...allChoices.slice(offset), ...allChoices.slice(0, offset)], answer: expected,
+          explanation: `${word.written} · ${word.reading} · ${word.meaning}\n${word.example}\n${word.translation}`,
+        }), selected: answer,
+      }]);
+    } catch { setSaveError(true); }
     const score = correctCount + Number(answer === expected);
     setCorrectCount(score);
     setAnswer(null);

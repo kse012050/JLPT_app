@@ -8,6 +8,7 @@ import { InteractiveJapaneseWord } from '@/components/InteractiveJapaneseWord';
 import { bankByLevel, bankCounts, type BankLevel } from '@/content/n3-vocabulary-bank';
 import { batchCount, questionsForBatch, resultKey, wordsForBatch, type QuizMode } from '@/content/n3-vocabulary-quiz';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 
 type Stage = 'learn' | 'quiz' | 'result';
 const levels: BankLevel[] = ['N3', 'N4', 'N5'];
@@ -72,6 +73,15 @@ export default function N3VocabularyBankScreen() {
 
   async function advance() {
     if (!question || selected === null) return;
+    try {
+      await saveQuestionAttempts([{
+        question: reviewQuestion(`${resultKey(level, batch, mode)}:${question.word.id}`, 'vocabulary', `${level} 어휘 ${batch + 1}단원`, {
+          kind: mode === 'meaning' ? '뜻' : mode === 'reading' ? '한자 읽기' : '표기',
+          prompt: question.prompt, choices: question.choices, answer: question.answer,
+          explanation: `${question.word.word} · ${question.word.reading} · ${question.word.meaningKo}`,
+        }), selected,
+      }]);
+    } catch { setSaveError(true); }
     const nextCorrect = correct + Number(selected === question.answer);
     setCorrect(nextCorrect);
     setSelected(null);

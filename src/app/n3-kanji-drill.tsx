@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { HeaderBackButton } from '@/components/header-back-button';
 import reference from '@/content/n3-kanji-reference.json';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 
 const items: readonly (readonly [string, string])[] = reference.items.map(([word, reading]) => [word, reading] as const);
 const batchSize = 20;
@@ -55,7 +56,14 @@ export default function N3KanjiDrillScreen() {
   }
 
   async function next() {
-    if (selected === null) return;
+    if (selected === null || !current) return;
+    try {
+      await saveQuestionAttempts([{
+        question: reviewQuestion(`n3-kanji:${itemIndex}`, 'vocabulary', `N3 한자 읽기 ${batch + 1}묶음`, {
+          kind: '한자 읽기', prompt: current[0], choices, answer: current[1], explanation: `${current[0]} · ${current[1]}`,
+        }), selected,
+      }]);
+    } catch { setSaveError(true); }
     if (questionIndex < batchItems.length - 1) {
       setQuestionIndex((value) => value + 1);
       setSelected(null);

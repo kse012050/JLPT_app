@@ -7,6 +7,7 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { n3ListeningMocks } from '@/content/n3-listening-mock';
 import { questionChoices } from '@/content/question-choices';
 import { getN3Results, saveN3Result, type N3Results } from '@/storage/n3-progress';
+import { reviewQuestion, saveQuestionAttempts } from '@/storage/wrong-questions';
 import { playListeningTranscript, stopListeningPlayback } from '@/utils/listening-playback';
 
 const colors = { bg: '#F7F7FB', white: '#FFFFFF', ink: '#201F24', muted: '#797681', pink: '#E82E5A', pale: '#FFF0F4', green: '#087F5B', line: '#ECE9F0' };
@@ -53,7 +54,11 @@ export default function N3ListeningMockScreen() {
     if (!mock || !submitted) return;
     void stopListeningPlayback();
     saveN3Result(mock.id, score, mock.items.length).then(setBest).catch(() => setSaveError(true));
-  }, [mock, score, submitted]);
+    saveQuestionAttempts(mock.items.flatMap((item, index) => answers[index] === null ? [] : [{
+      question: reviewQuestion(`${mock.id}:${item.id}`, 'listening', mock.title, item.question, { transcript: item.transcript }),
+      selected: answers[index]!,
+    }])).catch(() => setSaveError(true));
+  }, [answers, mock, score, submitted]);
 
   function start(index: number) {
     void stopListeningPlayback();
